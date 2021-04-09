@@ -59,25 +59,22 @@ def fetch_last_alert() -> Alert:
 
 
 def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> bool:
-    """
-    - Check if current hour ignores fact if home is occupied
-        - Check if home owners are away
-    If all the conditions are met - trigger an alert
-    If alert is triggered - return True, otherwise return False
-    """
+    """Check if an alert needs to be triggered"""
     logging.info(f'Security CheckAlerts running...')
 
-    # check if an option to trigger alerts during predefined time is ON
+    # check if we are in the OVERRIDE hours,
+    # these will say, that no-matter if house is occupied,
+    # an alert will be triggered
     now = datetime.now()
     override_on = False
     if config.SECURITY_ON_OVERRIDE_HOURS is not None:
         for hr_rg in config.SECURITY_ON_OVERRIDE_HOURS:
             if is_hr_between(now.hour, hr_rg):
-                logging.info(f'Current hour ({now.hour}) is within override range {str(hr_rg)}')
+                logging.info(f'Alert override ON. Curr hr. ({now.hour}) is within override range {str(hr_rg)}')
                 override_on = True
                 break
 
-    # if we do have an override ON, then next step is redundant
+    # check if house is occupied (if the OVERRIDE above is not ON right now)
     home_occupied = False
     if not override_on:
         # finally, if we still have potential intruders available,
@@ -86,11 +83,11 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
         home_owners = find_owners_at_home_orm()
         if home_owners is not None and len(home_owners) > 0:
             home_occupied = True
-            logging.info(f'Alert not triggered. Owners are at home for at'
+            logging.info(f'Alert skipped. Owners are at home for at'
                          f' least {config.OWNERS_OUTSIDE_HOME_MIN} minute(s)')
             return False
 
-    # check if override is ON or house is not occupied
+    # trigger alert if OVERRIDE is ON or house is not occupied
     if override_on or not home_occupied:
         # at this stage, we can trigger an alert to home owners as we do have a
         # potential intruder in the security zone area and home owners are away
@@ -105,14 +102,12 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
         cv2.imwrite(f'{date_folder}/{img_name}', curr_frame)
         logging.info(f'File {date_folder}/{img_name} saved')
 
-        # check if notification needs to be sent to home owners
-        # this will happen only N-seconds from the last alert,
-        # this is a 3-step process:
-        # - first, fetch the last alert from the DB
+        # check if enough time has elapsed since last notification,
+        # for this, fetch the metadata for the last alert
         last_alert = fetch_last_alert()
-        # - calculate the time between now and -N seconds (set in config)
+        # calculate the time between now and -N seconds (set in config)
         alert_check_time = datetime.now() - timedelta(seconds=config.MIN_SEC_BETWEEN_ALERTS)
-        # - if alert has been triggered recently, skip the next one
+        # if alert has been triggered recently, skip the next one
         if last_alert.create_ts >= alert_check_time:
             logging.info(f'Alert already triggered at {str(last_alert.create_ts)}')
             return False

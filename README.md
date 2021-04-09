@@ -1,34 +1,47 @@
 # Third Eye
 
-This project is the software component from the full end 2 end House Monitoring System called **Third-Eye**.
+Third Eye is a full end 2 end Scene Monitoring System.
 
 It can:
 - analyse a scene 
 - perform motion detection & object detection
 - collect data and show useful statistics
-- trigger security alerts to home-owners when it's required
+- trigger security alerts when it's required
 
-Yes, there are plenty of repos and ready-to-use projects like this out there, but it's fun to build you own one,
+Ya, ya ... there are plenty of repos with similar projects out there, but it's fun to build you own one,
 with the additional benefit of understanding what's going on under the hood, and full control.
 
-## Hardware (TODO)
+Plus it's all modern, without much additional overhead and complexity.
+
+All code is produced in Python, including configuration, HTML and CSS (with the help of Streamlit), so there is
+not much context switching and brain farting as a result.
+
+## Hardware
 
 Let's talk hardware, shall we?
 
-WIP ... To be continued ...
+Here is the list of components needed to complete the project
 
-## Installation (TODO):
+- Raspberry PI (ideally RPi4) + case
+- USB camera (or optionally Wi-Fi camera)
+- Power supply or POE splitter
+- Google Coral USB accelerator
+- Micro-SD Card
+- HDMI -> MicroHDMI adapter
+- 5 Kilo of human brain (for potential camera or network troubleshooting)
 
+## Installation (TODO)
+
+- Raspbian
 - Virtual env
-- Crontab
-- TODO
 - Supervisor
+- Crontab
 
 ## Scripts in the repo (TODO)
 
-## Bonus: Overclocking Rpi:
+## Overclocking RPi
 
-It is possible to give RPi a little boost, but do it at your risk.
+It is possible to give RPi a little boost, but do it **at your risk**.
 
 See this great [article](https://magpi.raspberrypi.org/articles/how-to-overclock-raspberry-pi-4) for more info on
 that, and monitor your CPU temperature to avoid a nasty Cowabunga!
