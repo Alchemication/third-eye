@@ -1,0 +1,12 @@
+imutils
+simplejpeg
+fastapi
+SQLAlchemy
+pandas
+streamlit==0.62.0
+opencv-contrib-python
+imutils
+Pillow
+numpy
+tqdm
+twilio
