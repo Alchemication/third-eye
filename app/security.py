@@ -8,10 +8,19 @@ import numpy as np
 from models import ObjectDetection, Alert, HomeOccupancy
 from database import engine, Session
 from os import path, mkdir
+from twilio.rest import Client
+import smtplib
+import ssl
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 def find_owners_at_home(db_conn) -> list:
     """Check if home owner device was detected in the last N-minutes"""
+
+    # TODO: Consider removing this function and use ORM instead for consistency in the app
 
     # calculate curr time - N minutes
     min_occupancy_time = str(datetime.now() - timedelta(minutes=config.OWNERS_OUTSIDE_HOME_MIN))
@@ -32,7 +41,6 @@ def find_owners_at_home_orm() -> list:
     """
     Check if registered devices were detected on the Network in the last N-minutes.
     This is a more orm-friendly alternative to find_owners_at_home.
-    TODO: Consider removing function above
     """
 
     # calculate curr time - N minutes
@@ -47,7 +55,7 @@ def find_owners_at_home_orm() -> list:
     if devices_at_home is None:
         return []
     # otherwise, return a list of device owners
-    return devices_at_home['found_owners']
+    return devices_at_home.found_owners
 
 
 def fetch_last_alert() -> Alert:
@@ -112,12 +120,81 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
             logging.info(f'Alert already triggered at {str(last_alert.create_ts)}')
             return False
 
-        logging.info(f'Last alert sent at {str(last_alert.create_ts)}. Trigger a new alert')
+        logging.info(f'Last alert sent at {str(last_alert.create_ts)}. Trigger alert')
+        trigger_alert(detections, date_folder, img_name)
         return True
 
     # returning False indicates no alerts, code should not even get here
     logging.info('Alert not triggered. Final check completed')
     return False
+
+
+def trigger_alert(detections: List[ObjectDetection], img_folder: str, filename: str):
+    """Send an email or/and sms notification to home owners"""
+
+    # compose message body
+    intruder_labels = [i.label for i in detections]
+    msg_body = f'Third Eye registered potential silent intruders: {", ".join(intruder_labels)}.'
+
+    # send sms
+    if config.SMS_NOTIFICATIONS_ENABLED:
+        logging.info('Sending SMS Notification')
+        client = Client(config.TWILIO_SID, config.TWILIO_AUTH_TOKEN)
+        for p in config.NOTIFY_PHONE_NUMBERS:
+            message = client.messages.create(body=msg_body, from_=config.TWILIO_PHONE_NUMBER, to=p)
+            logging.info(f'Message sent to Twilio, message id: {message.sid}')
+
+    # send email
+    if config.EMAIL_NOTIFICATIONS_ENABLED:
+        logging.info('Sending Email Notification')
+        message = MIMEMultipart("alternative")
+        message["Subject"] = f"Third Eye alert - {str(datetime.now())}"
+
+        # Create the plain-text and HTML version of the message
+        plain_text = msg_body
+        html = f"""
+        <html>
+          <body>
+            <p>Hey,<br>
+               {msg_body}
+            </p>
+          </body>
+        </html>
+        """
+
+        # Turn these into plain/html MIMEText objects
+        part1 = MIMEText(plain_text, "plain")  # this will be displayed on Apple Watch (for example)
+        part2 = MIMEText(html, "html")  # this will be displayed in most of email clients
+
+        # Add HTML/plain-text parts to MIMEMultipart message
+        # The email client will try to render the last part first
+        message.attach(part1)
+        message.attach(part2)
+
+        # Open file in binary mode
+        with open(f'{img_folder}/{filename}', "rb") as attachment:
+            # Add file as application/octet-stream
+            # Email client can usually download this automatically as attachment
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+
+        # Add header as key/value pair to attachment part
+        part.add_header(
+            "Content-Disposition",
+            f"attachment; filename= {filename}",
+        )
+
+        # Add attachment to message
+        message.attach(part)
+
+        # Log in to server using secure context and send email
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
+            mail_resp = server.sendmail(config.EMAIL_SENDER_ADDRESS, config.RECEIVER_EMAIL_ADDRESSES,
+                                        message.as_string())
+            logging.info(f'Email sent. Server response: {str(mail_resp)}')
 
 
 def is_hr_between(time: int, time_range: tuple) -> bool:

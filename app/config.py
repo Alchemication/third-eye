@@ -24,6 +24,9 @@ IMG_FOLDER = '/home/pi/Laboratory/third-eye-images'
 # low-noise mode)
 LOGGING_LEVEL = logging.INFO
 
+# do SQL queries need to be displayed (sql-alchemy parameter)?
+LOG_DB_EVENTS = False
+
 # display average processing time per frame every N-frames
 AVG_PROC_TIME_N_FRAMES = 100
 
@@ -99,9 +102,12 @@ SECURITY_ON_OVERRIDE_HOURS = [(24, 4)]
 # define objects, which can trigger security alerts
 INTRUDER_OBJECTS = ['person', 'cat', 'dog']
 
-# wait this many seconds between sending multiple alerts
-MIN_SEC_ALERT_CHECK = 3  # number of seconds to wait before checking if alerts are needed
-MIN_SEC_BETWEEN_ALERTS = 60 * 180  # multiply 60 by number of minutes
+# if objects of interest have been detected in an image,
+# wait this many seconds before checking if alert needs to be triggered
+MIN_SEC_ALERT_CHECK = 2
+
+# if an alert was already sent within this many seconds, do not send another one
+MIN_SEC_BETWEEN_ALERTS = 60
 
 # configuration for SMS notifications
 # most of the items for security reasons need to be
@@ -110,6 +116,7 @@ SMS_NOTIFICATIONS_ENABLED = True
 TWILIO_PHONE_NUMBER = os.environ['TWILIO_PHONE_NUMBER']
 TWILIO_SID = os.environ['TWILIO_SID']
 TWILIO_AUTH_TOKEN = os.environ['TWILIO_AUTH_TOKEN']
+
 # these numbers will receive SMS notifications,
 # example format: +353861234,+353871234
 NOTIFY_PHONE_NUMBERS = os.environ['NOTIFY_PHONE_NUMBERS'].split(',')
@@ -120,6 +127,7 @@ SMTP_SERVER_HOST = os.environ['SMTP_SERVER_HOST']  # example: smtp.gmail.com
 SMTP_SERVER_PORT = int(os.environ['SMTP_SERVER_PORT'])  # example: 587 for TLS
 EMAIL_SENDER_ADDRESS = os.environ['EMAIL_SENDER_ADDRESS']
 EMAIL_SENDER_PASSWORD = os.environ['EMAIL_SENDER_PASSWORD']
+
 # these emails will receive Email notifications,
 # example format: adam12@gmail.com,anna81@gmail.com
 RECEIVER_EMAIL_ADDRESSES = os.environ['RECEIVER_EMAIL_ADDRESSES'].split(',')  # comma separated list of addresses

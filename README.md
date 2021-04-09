@@ -7,6 +7,7 @@ It can:
 - perform motion detection & object detection
 - collect data and show useful statistics
 - trigger security alerts when it's required
+- **Coming Soon:** talk to system via sms or email (disarm, arm, enable video stream)
 
 Ya, ya ... there are plenty of repos with similar projects out there, but it's fun to build you own one,
 with the additional benefit of understanding what's going on under the hood, and full control.
@@ -37,7 +38,7 @@ Here is the list of components needed to complete the project
 - Supervisor
 - Crontab
 
-## Scripts in the repo (TODO)
+## Project file structure (TODO)
 
 ## Overclocking RPi
 
@@ -46,7 +47,11 @@ It is possible to give RPi a little boost, but do it **at your risk**.
 See this great [article](https://magpi.raspberrypi.org/articles/how-to-overclock-raspberry-pi-4) for more info on
 that, and monitor your CPU temperature to avoid a nasty Cowabunga!
 
-## License:
+## Acknowledgements
+
+This project would not be possible if not many lessons and courses available at [PyImageSearch](https://www.pyimagesearch.com/).
+
+## License
 
 MIT
 

@@ -1,11 +1,8 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-from config import DB_FILE_PATH
+from config import DB_FILE_PATH, LOG_DB_EVENTS
 import sqlite3
-
-
-LOG_DB_EVENTS = True
 
 # Sql lite connection params, change connection params below to other DB for more production-ready code
 engine = create_engine(f"sqlite:///{DB_FILE_PATH}", connect_args={"check_same_thread": False,

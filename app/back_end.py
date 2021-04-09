@@ -83,7 +83,17 @@ def process_frames(object_trackers, model, labels):
     # initialize params used to measure single frame processing time
     counter = 0
     proc_times = []
+
+    # set motion detector to not-ready initially (it needs to have
+    # a few frames to learn the background)
     motion_detector_ready = False
+
+    # is checking for alerts needed, initialize by True,
+    # and then after each alert check set to False for N-seconds,
+    # so we are not constantly firing DB queries and saving images,
+    # (alert check will run in a separate thread)
+    is_check_alert = True
+    last_alert_check_ts = None
 
     # initialize current day, as we need to reset object trackers on a new day
     curr_day = datetime.now().day
@@ -97,7 +107,7 @@ def process_frames(object_trackers, model, labels):
             importlib.reload(config)
 
         # initialize start time to calculate time to process 1 frame
-        time_start = time.process_time()
+        curr_frame_ts = datetime.now()
 
         # read the next frame from the video stream, resize it,
         # convert the frame to grayscale, and blur it
@@ -162,7 +172,7 @@ def process_frames(object_trackers, model, labels):
 
                 # add motion to detections, which will be bulk-saved in the DB later
                 (x, y, w, h) = cv2.boundingRect(cnt)
-                detections.append(MotionDetection(create_ts=datetime.now(), x=x, y=y, w=w, h=h,
+                detections.append(MotionDetection(create_ts=curr_frame_ts, x=x, y=y, w=w, h=h,
                                                   area=cnt_area))
 
                 # ===== Object Detection ======
@@ -199,7 +209,7 @@ def process_frames(object_trackers, model, labels):
                         logging.debug(f'Object: {label}; x={x}, y={y}, w={w}, h={h};'
                                       f' id={obj_id}; score={score:.2f}')
                         # add to detections, which will be bulk-saved in the DB later
-                        obj_detection = ObjectDetection(create_ts=datetime.now(), x=int(x), y=int(y),
+                        obj_detection = ObjectDetection(create_ts=curr_frame_ts, x=int(x), y=int(y),
                                                         w=int(w), h=int(h), area=int(w * h), label=label,
                                                         obj_id=obj_id, score=score)
                         detections.append(obj_detection)
@@ -217,14 +227,24 @@ def process_frames(object_trackers, model, labels):
                 valid_obj_detections = [d for d in detections if isinstance(d, ObjectDetection)
                                         and d.label in config.INTRUDER_OBJECTS]
                 # calculate number of seconds since last alert check
-                last_alert_check_num_sec = 2  # TODO
-                if len(valid_obj_detections) > 0 and last_alert_check_num_sec >= config.MIN_SEC_ALERT_CHECK:
+                if len(valid_obj_detections) > 0 and last_alert_check_ts is not None and \
+                        (curr_frame_ts - last_alert_check_ts).total_seconds() > config.MIN_SEC_ALERT_CHECK:
+                    logging.info(f'Set is_check_alert to True, curr_frame_ts is {str(curr_frame_ts)} and'
+                                 f' last_alert_check_ts is {str(last_alert_check_ts)}')
+                    is_check_alert = True
+                # check for alerts if we have valid objects detected,
+                # and N-seconds elapsed from previous check
+                if len(valid_obj_detections) > 0 and is_check_alert is True:
                     # check which frame to pass to security module (based on the debug switch)
                     curr_frame = frame_sm if config.APP_DEBUG_MODE else frame
                     # check alerts in a separate thread
                     alerts_t = threading.Thread(target=check_alerts, args=(valid_obj_detections, curr_frame,))
                     alerts_t.daemon = True
                     alerts_t.start()
+                    # disable alert checks for N-seconds
+                    is_check_alert = False
+                    last_alert_check_ts = curr_frame_ts
+                    logging.info(f'Set is_check_alert to False and last_alert_check_ts to {str(curr_frame_ts)}')
                 # save detections in the DB
                 if len(detections) > 0:
                     # save detections in a separate thread
@@ -234,7 +254,7 @@ def process_frames(object_trackers, model, labels):
                 break
 
         # calculate processing time
-        time_diff = time.process_time() - time_start
+        time_diff = (datetime.now() - curr_frame_ts).total_seconds()
 
         # check if we can start the motion detection
         if not motion_detector_ready and counter != 0 and counter % config.BG_SUB_HISTORY == 0:
