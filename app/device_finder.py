@@ -5,7 +5,7 @@ import re
 import logging
 from datetime import datetime
 from config import SUBNET_MASK, HOME_OWNERS_MAC_ADDR
-from database import SessionLocal
+from database import Session
 from models import HomeOccupancy
 
 
@@ -39,23 +39,20 @@ def main():
     # useful initializations
     now = datetime.now()
 
-    # create DB connection
-    session_local = SessionLocal()
-
     # fetch last occupancy
-    last_hoc = session_local.query(HomeOccupancy).order_by(HomeOccupancy.id.desc()).first()
+    last_hoc = Session.query(HomeOccupancy).order_by(HomeOccupancy.id.desc()).first()
 
     # check if status needs to be changed to away
     if len(idx) == 0 and (last_hoc is None or last_hoc.occupancy_status == 'home'):
         new_hoc = HomeOccupancy(create_ts=now, update_ts=now, occupancy_status='away')
-        session_local.add(new_hoc)
-        session_local.commit()
+        Session.add(new_hoc)
+        Session.commit()
         logging.info(f'Last occupancy status changed to: away')
         return
     elif len(idx) == 0 and last_hoc.occupancy_status == 'away':
         last_hoc.update_ts = now
-        session_local.add(last_hoc)
-        session_local.commit()
+        Session.add(last_hoc)
+        Session.commit()
         logging.info(f'Last occupancy status was already away, update_ts column modified')
         return
 
@@ -65,14 +62,14 @@ def main():
     if last_hoc is None or last_hoc.occupancy_status == 'away':
         new_hoc = HomeOccupancy(create_ts=now, update_ts=now, occupancy_status='home',
                                 found_owners=owner_names)
-        session_local.add(new_hoc)
-        session_local.commit()
+        Session.add(new_hoc)
+        Session.commit()
         logging.info(f'Last occupancy status changed to: home')
     elif last_hoc.occupancy_status == 'home':
         last_hoc.update_ts = now
         last_hoc.found_owners = owner_names
-        session_local.add(last_hoc)
-        session_local.commit()
+        Session.add(last_hoc)
+        Session.commit()
         logging.info(f'Last occupancy status was already home, update_ts column modified')
 
 

@@ -15,8 +15,9 @@ STREAM_RES = (1280, 720)  # 720p <- faster ~20 FPS on RPi4
 APP_DEBUG_MODE = True
 
 # paths
-BASE_DIR = '/home/pi/Laboratory/video-stream-api'
-DB_FILE_PATH = '/home/pi/Laboratory/video-stream-api-data/app.db'
+BASE_DIR = '/home/pi/Laboratory/third-eye'
+DB_FILE_PATH = '/home/pi/Laboratory/third-eye-db/app.db'
+IMG_FOLDER = '/home/pi/Laboratory/third-eye-images'
 
 # define how console logs will be displayed (default INFO,
 # set to DEBUG for troubleshooting and dev, and ERROR for
@@ -97,12 +98,6 @@ SECURITY_ON_OVERRIDE_HOURS = [(24, 4)]
 
 # define objects, which can trigger security alerts
 INTRUDER_OBJECTS = ['person', 'cat', 'dog']
-
-# folder for saved images
-IMG_FOLDER = './images'
-
-# folder for saved videos
-VID_FOLDER = './videos'
 
 # wait this many seconds between sending multiple alerts
 MIN_SEC_ALERT_CHECK = 3  # number of seconds to wait before checking if alerts are needed
