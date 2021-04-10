@@ -12,7 +12,7 @@ STREAM_RES = (1280, 720)  # 720p <- faster ~20 FPS on RPi4
 
 # enabling debug mode will show video in reduced resolution
 # with bounding boxes around detected objects
-APP_DEBUG_MODE = True
+APP_DEBUG_MODE = False
 
 # paths
 BASE_DIR = '/home/pi/Laboratory/third-eye'
@@ -71,7 +71,7 @@ MODEL_FILE = f'{BASE_DIR}/app/models/ssd_mobilenet_v2_coco_quant_postprocess_edg
 LABELS_FILE = f'{BASE_DIR}/app/models/coco_labels.txt'
 
 # minimum probability to filter weak detections (and prevent false positives)
-PRED_CONFIDENCE = 0.4
+PRED_CONFIDENCE = 0.5
 
 # max distance to link objects as same in object tracking
 MAX_SAME_OBJ_DIST = 30
