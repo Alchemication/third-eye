@@ -1,6 +1,6 @@
 # Third Eye
 
-Third Eye is a full end 2 end Scene Monitoring System, designed to run fully end 2 end on a resource constraint device.
+Third Eye is an end 2 end Scene Monitoring System, designed to run fully on a resource constraint device.
 
 The key benefits of such an approach are:
 - enhanced security
