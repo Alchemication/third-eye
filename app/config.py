@@ -63,8 +63,8 @@ USE_HISTORICAL_DAYS = 7
 BG_SUB_HISTORY = 100
 BG_SUB_THRESH = 40
 BG_SUB_SHADOWS = False
-MIN_OBJ_AREA = 100
-MIN_CONSECUTIVE_MOTION_FRAMES = 5
+MIN_OBJ_AREA = 80
+MIN_MOTION_FRAMES = 6
 
 # object detection model and labels location
 MODEL_FILE = f'{BASE_DIR}/app/models/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite'
@@ -104,7 +104,7 @@ INTRUDER_OBJECTS = ['person', 'cat', 'dog']
 
 # if objects of interest have been detected in an image,
 # wait this many seconds before checking if alert needs to be triggered
-MIN_SEC_ALERT_CHECK = 2
+MIN_SEC_ALERT_CHECK = 3
 
 # if an alert was already sent within this many seconds, do not send another one
 MIN_SEC_BETWEEN_ALERTS = 60

@@ -6,7 +6,9 @@ class Alert(Base):
     __tablename__ = "alerts"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), unique=False, index=False, nullable=False)
+    alert_status = Column(String(25), unique=False, index=False, nullable=False)
     create_ts = Column(DateTime, unique=False, index=True, nullable=False)
+    update_ts = Column(DateTime, unique=False, index=True, nullable=True)
     alert_metadata = Column(JSON, nullable=True)
 
 

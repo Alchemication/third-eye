@@ -80,6 +80,9 @@ def process_frames(object_trackers, model, labels):
                                                   varThreshold=config.BG_SUB_THRESH,
                                                   detectShadows=config.BG_SUB_SHADOWS)
 
+    # initialize variable to keep track of consecutive motion frames
+    motion_frames = 0
+
     # initialize params used to measure single frame processing time
     counter = 0
     proc_times = []
@@ -160,98 +163,124 @@ def process_frames(object_trackers, model, labels):
         # if any are detected inside the current frame
         detections = []
 
+        # assume no motion by default for each frame
+        motion_candidate = False
+
         # iterate through contours detected by background subtractor
         for cnt in contours:
             # check if we have enough images to detect motion
             if not motion_detector_ready:
                 break
+
+            # calculate area of detected contour
             cnt_area = cv2.contourArea(cnt)
-            # if area of a contour is greater than a threshold, we have a motion
-            if cnt_area > config.MIN_OBJ_AREA:
-                logging.info(f'Motion in frame detected')
 
-                # add motion to detections, which will be bulk-saved in the DB later
-                (x, y, w, h) = cv2.boundingRect(cnt)
-                detections.append(MotionDetection(create_ts=curr_frame_ts, x=x, y=y, w=w, h=h,
-                                                  area=cnt_area))
+            # if area of a contour is less than a threshold, we don't have a motion,
+            # so move on to the next contour
+            if cnt_area < config.MIN_OBJ_AREA:
+                continue
 
-                # ===== Object Detection ======
-                # now that we know we do have the motion, we can run object detection
-                # and see if we have any tracked objects in the frame
+            # indicate potential motion candidate
+            motion_candidate = True
 
-                # first, frame needs to be converted to Pillow format (this step
-                # will be unnecessary when we switch to newer version of Coral lib)
-                frame_pil = Image.fromarray(frame_sm)
-                # now we can detect objects in the frame
-                obj_det_results = model.detect_with_image(frame_pil, threshold=config.PRED_CONFIDENCE,
-                                                          keep_aspect_ratio=True, relative_coord=False)
-                # filter out unwanted objects
-                obj_det_results = [r for r in obj_det_results if labels[r.label_id] in config.TRACK_OBJECTS]
-                logging.debug(f'{len(obj_det_results)} object(s) detected')
-                # loop over the results
-                objects_detected = []
-                object_coordinates = {}
-                for r in obj_det_results:
-                    # extract the bounding box and box and predicted class label
-                    box = r.bounding_box.flatten().astype("int")
-                    (start_x, start_y, end_x, end_y) = box
-                    label = labels[r.label_id]
-                    # update variables used by the objects tracker
-                    if r.label_id not in objects_detected:
-                        objects_detected.append((label, r.score))
-                        object_coordinates[label] = []
-                    object_coordinates[label].append((start_x, start_y, end_x - start_x, end_y - start_y))
-                # now update all object trackers (for each of the labels in the frame)
-                for (label, score) in objects_detected:
-                    label_ids = object_trackers[label].update(object_coordinates[label])
-                    for label_id in label_ids:
-                        x, y, w, h, obj_id = label_id
-                        logging.debug(f'Object: {label}; x={x}, y={y}, w={w}, h={h};'
-                                      f' id={obj_id}; score={score:.2f}')
-                        # add to detections, which will be bulk-saved in the DB later
-                        obj_detection = ObjectDetection(create_ts=curr_frame_ts, x=int(x), y=int(y),
-                                                        w=int(w), h=int(h), area=int(w * h), label=label,
-                                                        obj_id=obj_id, score=score)
-                        detections.append(obj_detection)
-                        # draw the bounding box and label+id on the image (in debug mode)
-                        if config.APP_DEBUG_MODE:
-                            # draw bounding box
-                            cv2.rectangle(frame_sm, (x, y), (x + w, y + h),
-                                          (0, 255, 0), 1)
-                            # label/score/tracking ID
-                            cv2.putText(frame_sm, f'{label}:{score:.2f}:ID#{obj_id}', (x, y - 15),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
-                            # draw a dot for bounding box centroid
-                            cv2.circle(frame_sm, (obj_detection.cx, obj_detection.cy), 0, (0, 255, 0), -1)
-                # keep only valid object detections from detections list
-                valid_obj_detections = [d for d in detections if isinstance(d, ObjectDetection)
-                                        and d.label in config.INTRUDER_OBJECTS]
-                # calculate number of seconds since last alert check
-                if len(valid_obj_detections) > 0 and last_alert_check_ts is not None and \
-                        (curr_frame_ts - last_alert_check_ts).total_seconds() > config.MIN_SEC_ALERT_CHECK:
-                    logging.info(f'Set is_check_alert to True, curr_frame_ts is {str(curr_frame_ts)} and'
-                                 f' last_alert_check_ts is {str(last_alert_check_ts)}')
-                    is_check_alert = True
-                # check for alerts if we have valid objects detected,
-                # and N-seconds elapsed from previous check
-                if len(valid_obj_detections) > 0 and is_check_alert is True:
-                    # check which frame to pass to security module (based on the debug switch)
-                    curr_frame = frame_sm if config.APP_DEBUG_MODE else frame
-                    # check alerts in a separate thread
-                    alerts_t = threading.Thread(target=check_alerts, args=(valid_obj_detections, curr_frame,))
-                    alerts_t.daemon = True
-                    alerts_t.start()
-                    # disable alert checks for N-seconds
-                    is_check_alert = False
-                    last_alert_check_ts = curr_frame_ts
-                    logging.info(f'Set is_check_alert to False and last_alert_check_ts to {str(curr_frame_ts)}')
-                # save detections in the DB
-                if len(detections) > 0:
-                    # save detections in a separate thread
-                    det_t = threading.Thread(target=save_detections, args=(detections,))
-                    det_t.daemon = True
-                    det_t.start()
+            # increment consecutive frames motion counter
+            motion_frames += 1
+
+            # break from the loop early if we don't have enough consecutive frames with motion yet
+            if motion_frames < config.MIN_MOTION_FRAMES:
                 break
+
+            # at this stage we do have enough consecutive frames with motion
+            # reset consecutive frames motion counter
+            motion_frames = 0
+
+            # add motion to detections, which will be bulk-saved in the DB later
+            (x, y, w, h) = cv2.boundingRect(cnt)
+            detections.append(MotionDetection(create_ts=curr_frame_ts, x=x, y=y, w=w, h=h,
+                                              area=cnt_area))
+
+            # ===== Object Detection ======
+            # now that we know we do have the motion, we can run object detection
+            # and see if we have any tracked objects in the frame
+
+            # first, frame needs to be converted to Pillow format (this step
+            # will be unnecessary when we switch to newer version of Coral lib)
+            frame_pil = Image.fromarray(frame_sm)
+            # now we can detect objects in the frame
+            obj_det_results = model.detect_with_image(frame_pil, threshold=config.PRED_CONFIDENCE,
+                                                      keep_aspect_ratio=True, relative_coord=False)
+            # filter out unwanted objects
+            obj_det_results = [r for r in obj_det_results if labels[r.label_id] in config.TRACK_OBJECTS]
+            logging.debug(f'{len(obj_det_results)} object(s) detected')
+            # loop over the results
+            objects_detected = []
+            object_coordinates = {}
+            for r in obj_det_results:
+                # extract the bounding box and box and predicted class label
+                box = r.bounding_box.flatten().astype("int")
+                (start_x, start_y, end_x, end_y) = box
+                label = labels[r.label_id]
+                # update variables used by the objects tracker
+                if r.label_id not in objects_detected:
+                    objects_detected.append((label, r.score))
+                    object_coordinates[label] = []
+                object_coordinates[label].append((start_x, start_y, end_x - start_x, end_y - start_y))
+            # now update all object trackers (for each of the labels in the frame)
+            for (label, score) in objects_detected:
+                label_ids = object_trackers[label].update(object_coordinates[label])
+                for label_id in label_ids:
+                    x, y, w, h, obj_id = label_id
+                    logging.debug(f'Object: {label}; x={x}, y={y}, w={w}, h={h};'
+                                  f' id={obj_id}; score={score:.2f}')
+                    # add to detections, which will be bulk-saved in the DB later
+                    obj_detection = ObjectDetection(create_ts=curr_frame_ts, x=int(x), y=int(y),
+                                                    w=int(w), h=int(h), area=int(w * h), label=label,
+                                                    obj_id=obj_id, score=score)
+                    detections.append(obj_detection)
+                    # draw the bounding box and label+id on the image (in debug mode)
+                    if config.APP_DEBUG_MODE:
+                        # draw bounding box
+                        cv2.rectangle(frame_sm, (x, y), (x + w, y + h),
+                                      (0, 255, 0), 1)
+                        # label/score/tracking ID
+                        cv2.putText(frame_sm, f'{label}:{score:.2f}:ID#{obj_id}', (x, y - 15),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+                        # draw a dot for bounding box centroid
+                        cv2.circle(frame_sm, (obj_detection.cx, obj_detection.cy), 0, (0, 255, 0), -1)
+            # keep only valid object detections from detections list
+            valid_obj_detections = [d for d in detections if isinstance(d, ObjectDetection)
+                                    and d.label in config.INTRUDER_OBJECTS]
+            # calculate number of seconds since last alert check
+            if len(valid_obj_detections) > 0 and last_alert_check_ts is not None and \
+                    (curr_frame_ts - last_alert_check_ts).total_seconds() > config.MIN_SEC_ALERT_CHECK:
+                logging.info(f'Set is_check_alert to True, curr_frame_ts is {str(curr_frame_ts)} and'
+                             f' last_alert_check_ts is {str(last_alert_check_ts)}')
+                is_check_alert = True
+            # check for alerts if we have valid objects detected,
+            # and N-seconds elapsed from previous check
+            if len(valid_obj_detections) > 0 and is_check_alert is True:
+                # check which frame to pass to security module (based on the debug switch)
+                curr_frame = frame_sm if config.APP_DEBUG_MODE else frame
+                # check alerts in a separate thread
+                alerts_t = threading.Thread(target=check_alerts, args=(valid_obj_detections, curr_frame,))
+                alerts_t.daemon = True
+                alerts_t.start()
+                # disable alert checks for N-seconds
+                is_check_alert = False
+                last_alert_check_ts = curr_frame_ts
+                logging.info(f'Set is_check_alert to False and last_alert_check_ts to {str(curr_frame_ts)}')
+            # save detections in the DB if motion has been captured in N-consecutive frames
+            # TODO: check this !!
+            if len(detections) > 0:
+                # save detections in a separate thread
+                det_t = threading.Thread(target=save_detections, args=(detections,))
+                det_t.daemon = True
+                det_t.start()
+            break
+
+        # reset consecutive frames motion counter if no motion was detected in the frame
+        if motion_candidate is False:
+            motion_frames = 0
 
         # calculate processing time
         time_diff = (datetime.now() - curr_frame_ts).total_seconds()

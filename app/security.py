@@ -120,20 +120,31 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
         if last_alert.create_ts >= alert_check_time:
             logging.info(f'Alert already triggered at {str(last_alert.create_ts)}')
             return False
+
+        # before triggering alerts, add a record to DB indicating that triggering
+        # is in progress, which will prevent duplicated alerts
+        a = Alert(create_ts=now, title='Potential intruders detected', alert_status='pending', alert_metadata={})
+        Session.add(a)
+        Session.commit()
+
         # trigger alert
         logging.info(f'Last alert sent at {str(last_alert.create_ts)}. Trigger alert')
         intruders, msg_id, mail_resp = trigger_alert(detections, date_folder, img_name)
-        # register new alert in the DB
-        a = Alert(create_ts=now, title='Potential intruders detected', alert_metadata={
+
+        # update alert in the DB with other relevant info and indicate it was triggered
+        a.update_ts = datetime.now()
+        a.alert_status = 'triggered'
+        a.alert_metadata = {
             'intruders': intruders,
             'msg_id': msg_id,
             'mail_resp': mail_resp,
             'img_path': f'{date_folder}/{img_name}',
             'prev_alert': str(last_alert.create_ts),
             'checked_intruder_objects': config.INTRUDER_OBJECTS
-        })
+        }
         Session.add(a)
         Session.commit()
+
         # return True, which indicates alert triggered
         return True
 
