@@ -17,7 +17,7 @@ Third Eye can:
 
 It can be also hacked, fully configured and adapted to any environment.
 
-Ya, ya ... there are plenty of repos with similar projects out there, but it's fun to build you own one,
+Ya, ya ... there are plenty of repos with similar projects out there, but it's fun to build your own one,
 with the additional benefit of understanding what's going on under the hood, and full control.
 
 Plus it's all modern, without much additional overhead and complexity.
