@@ -1,21 +1,29 @@
 # Third Eye
 
-Third Eye is a full end 2 end Scene Monitoring System.
+Third Eye is a full end 2 end Scene Monitoring System, designed to run fully end 2 end on a resource constraint device.
 
-It can:
+The key benefits of such an approach are:
+- enhanced security
+- data privacy
+- portability
+- low cost, and low power consumption
+
+Third Eye can:
 - analyse a scene 
 - perform motion detection & object detection
 - collect data and show useful statistics
 - trigger security alerts when it's required
 - **Coming Soon:** talk to system via sms or email (disarm, arm, enable video stream)
 
+It can be also hacked, fully configured and adapted to any environment.
+
 Ya, ya ... there are plenty of repos with similar projects out there, but it's fun to build you own one,
 with the additional benefit of understanding what's going on under the hood, and full control.
 
 Plus it's all modern, without much additional overhead and complexity.
 
-All code is produced in Python, including configuration, HTML and CSS (with the help of Streamlit), so there is
-not much context switching and brain farting as a result.
+100% of source code is written in Python, including configuration, HTML and CSS (with the help of Streamlit),
+so there is not much context switching and brain farting.
 
 ## Hardware
 
@@ -85,6 +93,13 @@ It is possible to give RPi a little boost, but do it **at your risk**.
 
 See this great [article](https://magpi.raspberrypi.org/articles/how-to-overclock-raspberry-pi-4) for more info on
 that, and monitor your CPU temperature to avoid a nasty Cowabunga!
+
+## Contributions/Feedback
+
+Any feedback is totally welcome. I did this project 100% during my spare time, so there are certainly many aspects,
+which can be improved.
+
+Please send a mail to [app.thirdeye@gmail.com](mailto:app.thirdeye@gmail.com) or create a PR.
 
 ## Acknowledgements
 
