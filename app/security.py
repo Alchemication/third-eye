@@ -99,14 +99,15 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
     if override_on or not home_occupied:
         # at this stage, we can trigger an alert to home owners as we do have a
         # potential intruder in the security zone area and home owners are away
-        logging.info('Trigger alert. Potential intruder detected and owners are not at home')
+        extra_text = 'alert override is ON' if override_on else 'house is not occupied'
+        logging.info(f'Trigger alert. Potential intruder(s) detected and {extra_text}')
 
         # create folder for current date if does not exist yet
         date_folder = f'{config.IMG_FOLDER}/{str(now.date())}'
         if not path.exists(date_folder):
             mkdir(date_folder)
         # save image in the images folder
-        img_name = f"{str(datetime.now())[11:].replace(':', '')}.jpg"  # '203732.507061.jpg'
+        img_name = f"{str(now)[11:].replace(':', '')}.jpg"  # '203732.507061.jpg'
         cv2.imwrite(f'{date_folder}/{img_name}', curr_frame)
         logging.info(f'File {date_folder}/{img_name} saved')
 
@@ -114,14 +115,26 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
         # for this, fetch the metadata for the last alert
         last_alert = fetch_last_alert()
         # calculate the time between now and -N seconds (set in config)
-        alert_check_time = datetime.now() - timedelta(seconds=config.MIN_SEC_BETWEEN_ALERTS)
+        alert_check_time = now - timedelta(seconds=config.MIN_SEC_BETWEEN_ALERTS)
         # if alert has been triggered recently, skip the next one
         if last_alert.create_ts >= alert_check_time:
             logging.info(f'Alert already triggered at {str(last_alert.create_ts)}')
             return False
-
+        # trigger alert
         logging.info(f'Last alert sent at {str(last_alert.create_ts)}. Trigger alert')
-        trigger_alert(detections, date_folder, img_name)
+        intruders, msg_id, mail_resp = trigger_alert(detections, date_folder, img_name)
+        # register new alert in the DB
+        a = Alert(create_ts=now, title='Potential intruders detected', alert_metadata={
+            'intruders': intruders,
+            'msg_id': msg_id,
+            'mail_resp': mail_resp,
+            'img_path': f'{date_folder}/{img_name}',
+            'prev_alert': str(last_alert.create_ts),
+            'checked_intruder_objects': config.INTRUDER_OBJECTS
+        })
+        Session.add(a)
+        Session.commit()
+        # return True, which indicates alert triggered
         return True
 
     # returning False indicates no alerts, code should not even get here
@@ -129,22 +142,32 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
     return False
 
 
-def trigger_alert(detections: List[ObjectDetection], img_folder: str, filename: str):
-    """Send an email or/and sms notification to home owners"""
+def trigger_alert(detections: List[ObjectDetection], img_folder: str, filename: str) -> tuple:
+    """
+    Send an email or/and sms notification to home owners
+    Returns a list of identified labels, sms ID (or None if disabled)
+    and email response data (or None if disabled)
+    """
 
     # compose message body
     intruder_labels = [i.label for i in detections]
     msg_body = f'Third Eye registered potential silent intruders: {", ".join(intruder_labels)}.'
 
     # send sms
+    sms_msg_sid = None
     if config.SMS_NOTIFICATIONS_ENABLED:
         logging.info('Sending SMS Notification')
-        client = Client(config.TWILIO_SID, config.TWILIO_AUTH_TOKEN)
-        for p in config.NOTIFY_PHONE_NUMBERS:
-            message = client.messages.create(body=msg_body, from_=config.TWILIO_PHONE_NUMBER, to=p)
-            logging.info(f'Message sent to Twilio, message id: {message.sid}')
+        try:
+            client = Client(config.TWILIO_SID, config.TWILIO_AUTH_TOKEN)
+            for p in config.NOTIFY_PHONE_NUMBERS:
+                message = client.messages.create(body=msg_body, from_=config.TWILIO_PHONE_NUMBER, to=p)
+                sms_msg_sid = message.sid
+                logging.info(f'Message sent to Twilio, message id: {sms_msg_sid}')
+        except Exception as e:
+            logging.error(f'SMS error: {str(e)}')
 
     # send email
+    email_resp = None
     if config.EMAIL_NOTIFICATIONS_ENABLED:
         logging.info('Sending Email Notification')
         message = MIMEMultipart("alternative")
@@ -155,7 +178,7 @@ def trigger_alert(detections: List[ObjectDetection], img_folder: str, filename: 
         html = f"""
         <html>
           <body>
-            <p>Hey,<br>
+            <p>Hey there,<br>
                {msg_body}
             </p>
           </body>
@@ -190,11 +213,17 @@ def trigger_alert(detections: List[ObjectDetection], img_folder: str, filename: 
 
         # Log in to server using secure context and send email
         context = ssl.create_default_context()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
-            mail_resp = server.sendmail(config.EMAIL_SENDER_ADDRESS, config.RECEIVER_EMAIL_ADDRESSES,
-                                        message.as_string())
-            logging.info(f'Email sent. Server response: {str(mail_resp)}')
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+                server.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
+                email_resp = server.sendmail(config.EMAIL_SENDER_ADDRESS, config.RECEIVER_EMAIL_ADDRESSES,
+                                            message.as_string())
+                logging.info(f'Email sent. Server response: {str(email_resp)}')
+        except Exception as e:
+            logging.error(f'Email error: {str(e)}')
+
+        # return all elements
+        return intruder_labels, sms_msg_sid, email_resp
 
 
 def is_hr_between(time: int, time_range: tuple) -> bool:

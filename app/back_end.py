@@ -264,17 +264,17 @@ def process_frames(object_trackers, model, labels):
         # display average processing time for each frame
         # and check if the hour has changed (if yes - reset object ID counters)
         if counter != 0 and counter % config.AVG_PROC_TIME_N_FRAMES == 0:
-            logging.debug(f'Avg processing time per frame:'
-                          f' {sum(proc_times) / config.AVG_PROC_TIME_N_FRAMES:.2f} sec.')
+            logging.info(f'Avg processing time per frame:'
+                         f' {sum(proc_times) / config.AVG_PROC_TIME_N_FRAMES:.2f} sec.')
             counter = 0
             proc_times = []
             # check day, and if it's changed - reset object trackers
-            new_day = datetime.now().day
+            new_day = curr_frame_ts.day
             if new_day != curr_day:
                 curr_day = new_day
                 object_trackers = {label: EuclideanDistTracker(config.MAX_SAME_OBJ_DIST) for
                                    label in config.TRACK_OBJECTS}
-                logging.info(f'Day changed: {curr_day}')
+                logging.info(f'New day of the month arrived: {curr_day}. Object trackers have been reset.')
         else:
             proc_times.append(time_diff)
             counter += 1

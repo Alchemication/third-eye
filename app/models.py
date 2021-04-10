@@ -7,7 +7,7 @@ class Alert(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), unique=False, index=False, nullable=False)
     create_ts = Column(DateTime, unique=False, index=True, nullable=False)
-    objects_metadata = Column(JSON, nullable=True)
+    alert_metadata = Column(JSON, nullable=True)
 
 
 class HomeOccupancy(Base):
