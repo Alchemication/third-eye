@@ -4,7 +4,7 @@ import subprocess
 import re
 import logging
 from datetime import datetime
-from config import SUBNET_MASK, HOME_OWNERS_MAC_ADDR
+import config
 from database import Session
 from models import HomeOccupancy
 
@@ -16,7 +16,7 @@ def main():
     """
 
     # construct command
-    CMD = f'sudo nmap -sn {SUBNET_MASK}'
+    CMD = f'sudo nmap -sn {config.SUBNET_MASK}'
     logging.info(f'Executing cmd: {CMD}')
 
     # execute CLI process
@@ -27,8 +27,8 @@ def main():
     mac_addresses = [m[0] for m in re.findall(r'(([0-9a-fA-F:]){17})', str(out))]
 
     # find devices of interest
-    cfg_mac_addr = [d['mac_addr'] for d in HOME_OWNERS_MAC_ADDR]
-    cfg_owner_names = [d['owner'] for d in HOME_OWNERS_MAC_ADDR]
+    cfg_mac_addr = [d['mac_addr'] for d in config.HOME_OWNERS_MAC_ADDR]
+    cfg_owner_names = [d['owner'] for d in config.HOME_OWNERS_MAC_ADDR]
 
     # find indexes of devices found in the network
     idx = []
@@ -74,9 +74,6 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format="%(asctime)s.%(msecs)03f %(levelname)s %(message)s",
-                        level=logging.INFO, datefmt="%H:%M:%S")
+    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt="%H:%M:%S")
     logger = logging.getLogger()
-    # logger.setLevel(logging.DEBUG)
-    logger.setLevel(logging.INFO)
     main()

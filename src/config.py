@@ -23,6 +23,7 @@ IMG_FOLDER = '/home/pi/Laboratory/third-eye-images'
 # set to DEBUG for troubleshooting and dev, and ERROR for
 # low-noise mode)
 LOGGING_LEVEL = logging.INFO
+LOGGING_FORMAT = "%(asctime)s.%(msecs)03f - %(name)s - %(levelname)s - %(message)s"
 
 # do SQL queries need to be displayed (sql-alchemy parameter)?
 LOG_DB_EVENTS = False
@@ -67,8 +68,8 @@ MIN_OBJ_AREA = 80
 MIN_MOTION_FRAMES = 6
 
 # object detection model and labels location
-MODEL_FILE = f'{BASE_DIR}/app/models/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite'
-LABELS_FILE = f'{BASE_DIR}/app/models/coco_labels.txt'
+MODEL_FILE = f'{BASE_DIR}/src/models/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite'
+LABELS_FILE = f'{BASE_DIR}/src/models/coco_labels.txt'
 
 # minimum probability to filter weak detections (and prevent false positives)
 PRED_CONFIDENCE = 0.5

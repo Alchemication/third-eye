@@ -3,9 +3,10 @@ import numpy as np
 from datetime import datetime, timedelta
 from config import USE_HISTORICAL_DAYS, TRACK_OBJECTS, OBJ_PROBA
 import argparse
-from database import SessionLocal
+from database import Session
 from models import MotionDetection, ObjectDetection
 import logging
+import config
 from tqdm import tqdm
 
 
@@ -43,7 +44,6 @@ def gen_dts(size: int) -> tuple:
 def populate(dts: list, db_table: str) -> int:
     """Populate DB table with random observations"""
 
-    db_sess = SessionLocal()
     counter = 0
 
     for dt_data in tqdm(dts):
@@ -63,8 +63,8 @@ def populate(dts: list, db_table: str) -> int:
             else:
                 raise ValueError(f'Table {db_table} does not exist')
             try:
-                db_sess.add(ob)
-                db_sess.commit()
+                Session.add(ob)
+                Session.commit()
                 counter += 1
             except Exception as e:
                 logging.error(f'Detection not saved: {str(e)}')
@@ -73,11 +73,8 @@ def populate(dts: list, db_table: str) -> int:
 
 if __name__ == '__main__':
     # set up logger
-    logging.basicConfig(format="%(asctime)s.%(msecs)03f %(levelname)s %(message)s",
-                        level=logging.INFO, datefmt="%H:%M:%S")
+    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt="%H:%M:%S")
     logger = logging.getLogger()
-    # logger.setLevel(logging.DEBUG)
-    logger.setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description='Sample data generator')
     parser.add_argument('--table', type=str, help='name of table to populate', required=True)

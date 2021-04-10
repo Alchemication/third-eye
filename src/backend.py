@@ -20,10 +20,8 @@ from models import MotionDetection, ObjectDetection
 
 
 # set up logger
-logging.basicConfig(format="%(asctime)s.%(msecs)03f %(levelname)s %(message)s",
-                    level=logging.INFO, datefmt="%H:%M:%S")
+logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt="%H:%M:%S")
 logger = logging.getLogger()
-logger.setLevel(config.LOGGING_LEVEL)
 
 
 # check if running in debug mode
@@ -268,9 +266,8 @@ def process_frames(object_trackers, model, labels):
                 # disable alert checks for N-seconds
                 is_check_alert = False
                 last_alert_check_ts = curr_frame_ts
-                logging.info(f'Set is_check_alert to False and last_alert_check_ts to {str(curr_frame_ts)}')
-            # save detections in the DB if motion has been captured in N-consecutive frames
-            # TODO: check this !!
+                logging.debug(f'Set is_check_alert to False and last_alert_check_ts to {str(curr_frame_ts)}')
+            # save detections in the DB
             if len(detections) > 0:
                 # save detections in a separate thread
                 det_t = threading.Thread(target=save_detections, args=(detections,))
@@ -293,8 +290,8 @@ def process_frames(object_trackers, model, labels):
         # display average processing time for each frame
         # and check if the hour has changed (if yes - reset object ID counters)
         if counter != 0 and counter % config.AVG_PROC_TIME_N_FRAMES == 0:
-            logging.info(f'Avg processing time per frame:'
-                         f' {sum(proc_times) / config.AVG_PROC_TIME_N_FRAMES:.2f} sec.')
+            logging.debug(f'Avg processing time per frame:'
+                          f' {sum(proc_times) / config.AVG_PROC_TIME_N_FRAMES:.2f} sec.')
             counter = 0
             proc_times = []
             # check day, and if it's changed - reset object trackers

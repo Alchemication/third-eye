@@ -22,7 +22,7 @@ def get_obj_det_comps(model_file: str, labels_file: str) -> tuple:
 
 def save_detections(detections: list) -> None:
     """Save detections into DB"""
-    logging.info(f'Saving {len(detections)} detection(s)')
+    logging.debug(f'Saving {len(detections)} detection(s)')
     try:
         # stage detections for DB insert
         Session.add_all(detections)

@@ -21,24 +21,63 @@ not much context switching and brain farting as a result.
 
 Let's talk hardware, shall we?
 
-Here is the list of components needed to complete the project
+Even though, it would be quite trivial to adapt this app to any OS and hardware, it has been developed, tailored and
+tested on resource constraint devices, like Raspberry PI.
 
-- Raspberry PI (ideally RPi4) + case
+Here is a list of components needed to complete the project in its ideal setup. 
+
+- Raspberry PI (ideally RPi4) + case (connected via Ethernet or Wi-Fi)
 - USB camera (or optionally Wi-Fi camera)
 - Power supply or POE splitter
 - Google Coral USB accelerator
 - Micro-SD Card
 - HDMI -> MicroHDMI adapter
-- 5 Kilo of human brain (for potential camera or network troubleshooting)
+- 5 Kilo of human brain (for potential camera or network troubleshooting) ;-D
 
-## Installation (TODO)
+## Installation
 
 - Raspbian
 - Virtual env
+- Clone repo
 - Supervisor
 - Crontab
 
-## Project file structure (TODO)
+TODO: Add more details here...
+
+## Project file structure
+
+Whole application source is in the `src` folder.
+
+2 main modules:
+- backend.py - this is the heart of the app where image processing, and alert triggering is happening
+- frontend.py - this is the front end, where we can see the live feed and data visualisations
+
+Other supporting modules:
+- config.py - app configuration
+- database.py - database connection (currently SQLite seems to be sufficient)
+- detections.py - provide trending datasets about historical detections (and some detections related functions)
+- models.py - SQL Alchemy models and DB creation
+- object_tracker.py - object tracking
+- security.py - check if alerts need to be triggered based on defined criteria and configuration, and send SMS and email alerts
+
+Standalone scripts:
+- rand_data_generator.py - generate some synthetic data in dev, which will populate plots
+- rec_video.py - record video clip from the video stream 
+- rpi_stats.py - record Raspberry PI temperature and voltage stats (useful when overclocking) 
+- device_finder.py - find devices currently connected to the local network
+
+ML models:
+- models/ contains labels and ssd_mobilenet model for object detection inference
+
+Other:
+- images folder
+- database folder
+- logs folder
+
+The 3 folders listed above should be created somewhere outside the source code, so if source code gets wiped, they will
+stay in place. The first 2 folders can be configured via the config file.
+
+The `logs` folder is configured in CronJobs and Supervisor (see the Installation section).
 
 ## Overclocking RPi
 

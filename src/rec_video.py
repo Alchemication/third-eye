@@ -69,9 +69,7 @@ if __name__ == '__main__':
     args = vars(ap.parse_args())
 
     # set up logger
-    logging.basicConfig(format="%(asctime)s.%(msecs)03f %(levelname)s %(message)s",
-                        level=logging.INFO, datefmt="%H:%M:%S")
+    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt="%H:%M:%S")
     logger = logging.getLogger()
-    logger.setLevel(config.LOGGING_LEVEL)
 
     main(args['filename'], args['duration'], args['codec'])
