@@ -10,3 +10,4 @@ Pillow
 numpy
 tqdm
 twilio
+email_listener

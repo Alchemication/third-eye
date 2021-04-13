@@ -1,10 +1,9 @@
-# App files
-videos/*
-images/*
-
 # IDE/OS files
 DS_Store
 .idea
+
+# dummy files to ignore
+ZZZ*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

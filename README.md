@@ -52,6 +52,18 @@ Here is a list of components needed to complete the project in its ideal setup.
 
 TODO: Add more details here...
 
+## Communicating with system
+
+Communication with system is achieved via emails with specific commands:
+- Subject: `<command>`
+- Body: `{'hostname': <camera-hostname>} ... anything else here will be ignored ...`
+
+Currently supported commands:
+- `start alerts` - Force alerts to ON for 1 hr (even when house is occupied) 
+- `resume alerts` - Resume alerts to normal mode
+- `pause alerts` - Do not trigger any alerts for 1 hr (even house is not occupied or override mode is ON)
+- `open stream` - Enable remote access for 10 minutes. This will send a unique URL to the user, where stream can be accessed 
+
 ## Project file structure
 
 Whole application source is in the `src` folder.

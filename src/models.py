@@ -1,5 +1,32 @@
 from sqlalchemy import Column, Integer, String, DateTime, Float, JSON
 from database import Base, engine
+import re
+import json
+
+
+class Command(Base):
+    __tablename__ = "command"
+    id = Column(Integer, primary_key=True, index=True)
+    create_ts = Column(DateTime, unique=False, index=True, nullable=False)
+    command_type = Column(String(25), unique=False, index=False, nullable=False)
+    command = Column(String(255), unique=False, index=False, nullable=False)
+    raw_body = Column(String(255), nullable=False)
+    parsed_body = Column(JSON, nullable=True)
+
+    def __init__(self, *args, **kwargs):
+        """
+        Overwrite constructor and parse raw body to dict
+        """
+        super().__init__(*args, **kwargs)
+        self.parsed_body = self.parse_body()
+
+    def parse_body(self):
+        """Find dict formatted string in the body and try to parse it"""
+        results = re.search(r'({.+})', self.raw_body)
+        if results is not None:
+            first_match = results.groups()[0]
+            return json.loads(first_match)
+        return None
 
 
 class Alert(Base):
