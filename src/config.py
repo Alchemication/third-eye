@@ -1,5 +1,4 @@
 import logging
-import cv2
 import os
 
 
@@ -31,8 +30,12 @@ LOG_DB_EVENTS = False
 # display average processing time per frame every N-frames
 AVG_PROC_TIME_N_FRAMES = 100
 
-# URL for the stream
-VIDEO_STREAM_URL = 'http://192.168.1.187:8000/video-feed'
+# URL for the stream (will be used if there are no public streams open)
+VIDEO_STREAM_BASE_URL = 'http://192.168.1.187:8000'
+VIDEO_STREAM_PATH = 'video-feed'
+
+# Number of same exact consecutive frames to detect frozen stream
+STREAM_FROZEN_N_FRAMES = 10
 
 # Set up stream properties, set these if the camera used requires some adjustments
 STREAM_PROPS = (
@@ -42,7 +45,7 @@ STREAM_PROPS = (
 )
 
 # Toggle displaying in the UI if home owners are at home
-SHOW_HOME_OCCUPANCY_STATUS = True
+SHOW_HOME_OCCUPANCY_STATUS = False
 
 # Define secure zone (which will be used to detect potential intruders),
 # this needs to be defined for every camera location individually,
@@ -132,3 +135,9 @@ EMAIL_SENDER_PASSWORD = os.environ['EMAIL_SENDER_PASSWORD']
 # these emails will receive Email notifications,
 # example format: adam12@gmail.com,anna81@gmail.com
 RECEIVER_EMAIL_ADDRESSES = os.environ['RECEIVER_EMAIL_ADDRESSES'].split(',')  # comma separated list of addresses
+
+# API Key to open up/access the stream to the outside world
+STREAM_API_KEY = os.environ['STREAM_API_KEY']
+
+# how many minutes to open up the stream access for
+STREAM_EXPIRY_SEC = 180

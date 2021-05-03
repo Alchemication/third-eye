@@ -1,0 +1,15 @@
+h5 {
+    color: #CCC;
+}
+
+#video-stream {
+    display: grid;
+}
+
+#motion-analysis {
+    display: none;
+}
+
+#objects-analysis {
+    display: none;
+}

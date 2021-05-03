@@ -1,28 +1,28 @@
-from fastapi import FastAPI
-import numpy as np
-from starlette.responses import StreamingResponse
-import cv2
-from imutils.video import VideoStream
-import threading
-import imutils
-import config
-from detections import get_max_obj_ids, save_detections, get_obj_det_comps
-from security import check_alerts
+import importlib
 import logging
+import threading
 import time
 from datetime import datetime
+
+import cv2
+import imutils
+import numpy as np
 import simplejpeg
 from PIL import Image
-from object_tracker import EuclideanDistTracker
-import importlib
-from database import engine
-from models import MotionDetection, ObjectDetection
+from fastapi import FastAPI
+from imutils.video import VideoStream
+from starlette.responses import StreamingResponse
 
+import config
+from database import engine
+from detections import get_max_obj_ids, save_detections, get_obj_det_comps
+from models import MotionDetection, ObjectDetection
+from object_tracker import EuclideanDistTracker
+from security import check_alerts
 
 # set up logger
 logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt="%H:%M:%S")
 logger = logging.getLogger()
-
 
 # check if running in debug mode
 if config.APP_DEBUG_MODE:
@@ -99,6 +99,11 @@ def process_frames(object_trackers, model, labels):
     # initialize current day, as we need to reset object trackers on a new day
     curr_day = datetime.now().day
 
+    # define variables, which can be used to determine if stream is frozen,
+    # i.e. if the exact same image shows up N-times in a row
+    img_freeze_counter = 0
+    prev_frame_avg = 0
+
     # loop over frames from the video stream
     while True:
 
@@ -143,6 +148,23 @@ def process_frames(object_trackers, model, labels):
 
         # convert to grayscale
         frame_gray = cv2.cvtColor(frame_sm, cv2.COLOR_BGR2GRAY)
+
+        # check mean of color intensity to detect a frozen stream
+        curr_frame_avg = frame_gray.mean()
+        if curr_frame_avg == prev_frame_avg:
+            img_freeze_counter += 1
+        else:
+            img_freeze_counter = 0
+            prev_frame_avg = curr_frame_avg
+
+        # if we have enough frames with the same color intensity, then reset the stream
+        if img_freeze_counter == config.STREAM_FROZEN_N_FRAMES:
+            logging.warning(f'Stream frozen for {config.STREAM_FROZEN_N_FRAMES} frames, resetting Camera Capture...')
+            video_stream.stop()
+            del video_stream
+            time.sleep(2.0)  # wait for all threads to calm down (this might be unnecessary, test more...)
+            video_stream = get_video_stream()
+            img_freeze_counter = 0
 
         # show secure area in debug mode
         if config.APP_DEBUG_MODE:

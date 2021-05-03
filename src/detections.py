@@ -50,7 +50,7 @@ def get_max_obj_ids(now, db_conn) -> dict:
     return {rec['label']: rec['next_obj_id'] for rec in df.to_dict(orient='records')}
 
 
-def get_motion_df(db_conn) -> pd.DataFrame:
+def get_motion_analysis(db_conn) -> list:
     """Get means of motion detections by hour for last N-days and today"""
 
     # fetch results from DB
@@ -81,10 +81,10 @@ def get_motion_df(db_conn) -> pd.DataFrame:
     today = motion_det_df_resampled_avg_td.reset_index()
     today.columns = ['Hour', 'Today']
     # return merged: historical and today's datasets
-    return hist.merge(today, how='left').fillna(0).set_index('Hour')
+    return hist.merge(today, how='left').fillna(0).to_dict(orient='records')
 
 
-def get_object_det_df(db_conn) -> dict:
+def get_objects_analysis(db_conn) -> dict:
     """Get means of object detections by hour for last N-days and today"""
 
     # fetch detections from db
@@ -129,5 +129,5 @@ def get_object_det_df(db_conn) -> dict:
         today = object_det_df_resampled_avg_td.reset_index()
         today.columns = ['Hour', 'Today']
         # add to results
-        results[label] = hist.merge(today, how='left').fillna(0).set_index('Hour')
+        results[label] = hist.merge(today, how='left').fillna(0).to_dict(orient='records')
     return results
