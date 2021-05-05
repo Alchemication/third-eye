@@ -2,6 +2,13 @@ from sqlalchemy import Column, Integer, String, DateTime, Float, JSON
 from database import Base, engine
 
 
+class HeartBeat(Base):
+    __tablename__ = "heart_beats"
+    id = Column(Integer, primary_key=True, index=True)
+    create_ts = Column(DateTime, unique=False, index=True, nullable=False)
+    im_filename = Column(String(125), unique=False, index=False, nullable=False)
+
+
 class StreamConnection(Base):
     __tablename__ = "stream_connections"
     id = Column(Integer, primary_key=True, index=True)

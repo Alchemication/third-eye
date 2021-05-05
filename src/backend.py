@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 from datetime import datetime
+import socket
 
 import cv2
 import imutils
@@ -12,6 +13,7 @@ from PIL import Image
 from fastapi import FastAPI
 from imutils.video import VideoStream
 from starlette.responses import StreamingResponse
+import imagezmq
 
 import config
 from database import engine
@@ -37,7 +39,7 @@ output_frame = None
 lock = threading.Lock()
 
 
-def get_obj_trackers(max_dist, track_objects, now) -> dict:
+def create_obj_trackers(max_dist, track_objects, now) -> dict:
     """Create an instance of Object Tracker for each label"""
     logging.info("Creating object trackers")
     try:
@@ -51,7 +53,7 @@ def get_obj_trackers(max_dist, track_objects, now) -> dict:
     return object_trackers
 
 
-def get_video_stream(cam_src: int = 0) -> VideoStream:
+def create_video_stream(cam_src: int = 0) -> VideoStream:
     """Initialize stream from the camera, source=0 -> WebCam, source=1 -> PyCam"""
     logging.info('Starting video stream...')
     vs = VideoStream(src=cam_src, resolution=config.STREAM_RES).start()
@@ -61,7 +63,13 @@ def get_video_stream(cam_src: int = 0) -> VideoStream:
     return vs
 
 
-def process_frames(object_trackers, model, labels):
+def create_heart_beat_sender() -> imagezmq.ImageSender:
+    """Create a PUB server to send images for monitoring purposes in a non-blocking mode"""
+    logging.info('Starting Heart Beat MQ (Publisher)...')
+    return imagezmq.ImageSender(connect_to=config.HEART_BEAT_PUB_URL, REQ_REP=False)
+
+
+def process_frames(object_trackers, model, labels, hb_sender):
     """
     Execute processing pipeline to the frames from the camera:
     - motion detection
@@ -99,10 +107,8 @@ def process_frames(object_trackers, model, labels):
     # initialize current day, as we need to reset object trackers on a new day
     curr_day = datetime.now().day
 
-    # define variables, which can be used to determine if stream is frozen,
-    # i.e. if the exact same image shows up N-times in a row
-    img_freeze_counter = 0
-    prev_frame_avg = 0
+    # initialize device name
+    device_name = socket.gethostname()
 
     # loop over frames from the video stream
     while True:
@@ -148,23 +154,6 @@ def process_frames(object_trackers, model, labels):
 
         # convert to grayscale
         frame_gray = cv2.cvtColor(frame_sm, cv2.COLOR_BGR2GRAY)
-
-        # check mean of color intensity to detect a frozen stream
-        curr_frame_avg = frame_gray.mean()
-        if curr_frame_avg == prev_frame_avg:
-            img_freeze_counter += 1
-        else:
-            img_freeze_counter = 0
-            prev_frame_avg = curr_frame_avg
-
-        # if we have enough frames with the same color intensity, then reset the stream
-        if img_freeze_counter == config.STREAM_FROZEN_N_FRAMES:
-            logging.warning(f'Stream frozen for {config.STREAM_FROZEN_N_FRAMES} frames, resetting Camera Capture...')
-            video_stream.stop()
-            del video_stream
-            time.sleep(2.0)  # wait for all threads to calm down (this might be unnecessary, test more...)
-            video_stream = get_video_stream()
-            img_freeze_counter = 0
 
         # show secure area in debug mode
         if config.APP_DEBUG_MODE:
@@ -309,11 +298,16 @@ def process_frames(object_trackers, model, labels):
             logging.info(f'Motion detector ready (counter is {counter})')
             motion_detector_ready = True
 
-        # display average processing time for each frame
-        # and check if the hour has changed (if yes - reset object ID counters)
-        if counter != 0 and counter % config.AVG_PROC_TIME_N_FRAMES == 0:
+        # perform some heart-beat actions every N-frames:
+        # - send heart beat to Message Queue
+        # - calculate average processing time for each frame
+        # - check if the day has changed (if yes - reset object ID counters)
+        if counter != 0 and counter % config.HEART_BEAT_INTERVAL_N_FRAMES == 0:
+            # send periodic image as a heart beat (non-blocking operation)
+            hb_sender.send_image(device_name, frame)
+            # display avg processing time
             logging.debug(f'Avg processing time per frame:'
-                          f' {sum(proc_times) / config.AVG_PROC_TIME_N_FRAMES:.2f} sec.')
+                          f' {sum(proc_times) / config.HEART_BEAT_INTERVAL_N_FRAMES:.2f} sec.')
             counter = 0
             proc_times = []
             # check day, and if it's changed - reset object trackers
@@ -322,7 +316,7 @@ def process_frames(object_trackers, model, labels):
                 curr_day = new_day
                 object_trackers = {label: EuclideanDistTracker(config.MAX_SAME_OBJ_DIST) for
                                    label in config.TRACK_OBJECTS}
-                logging.info(f'New day of the month arrived: {curr_day}. Object trackers have been reset.')
+                logging.info(f'Beginning of a new day: {curr_day}. Object trackers have been reset.')
         else:
             proc_times.append(time_diff)
             counter += 1
@@ -369,11 +363,11 @@ def video_feed():
 
 # create app components
 det_model, det_labels = get_obj_det_comps(config.MODEL_FILE, config.LABELS_FILE)
-det_object_trackers = get_obj_trackers(config.MAX_SAME_OBJ_DIST, config.TRACK_OBJECTS, datetime.now())
-video_stream = get_video_stream()
-
+det_object_trackers = create_obj_trackers(config.MAX_SAME_OBJ_DIST, config.TRACK_OBJECTS, datetime.now())
+video_stream = create_video_stream()
+heart_beat_sender = create_heart_beat_sender() if config.HEART_BEAT_ENABLED else None
 
 # start a thread, which will perform motion and object detection
-t = threading.Thread(target=process_frames, args=(det_object_trackers, det_model, det_labels,))
+t = threading.Thread(target=process_frames, args=(det_object_trackers, det_model, det_labels, heart_beat_sender,))
 t.daemon = True
 t.start()

@@ -27,15 +27,18 @@ LOGGING_FORMAT = "%(asctime)s.%(msecs)03f - %(name)s - %(levelname)s - %(message
 # do SQL queries need to be displayed (sql-alchemy parameter)?
 LOG_DB_EVENTS = False
 
-# display average processing time per frame every N-frames
-AVG_PROC_TIME_N_FRAMES = 100
-
 # URL for the stream (will be used if there are no public streams open)
 VIDEO_STREAM_BASE_URL = 'http://192.168.1.187:8000'
 VIDEO_STREAM_PATH = 'video-feed'
 
-# Number of same exact consecutive frames to detect frozen stream
-STREAM_FROZEN_N_FRAMES = 10
+# Heart beat configuration, when enabled - backend
+# will be sending heart beat images every N-seconds to
+# the message queue listening for heart beats
+HEART_BEAT_ENABLED = True
+HEART_BEAT_PUB_URL = 'tcp://*:5555'
+HEART_BEAT_SUB_URL = 'tcp://127.0.0.1:5555'
+HEART_BEAT_INTERVAL_N_FRAMES = 200
+HEART_BEAT_INTERVAL_MAX_IDLE_N_SEC = 60
 
 # Set up stream properties, set these if the camera used requires some adjustments
 STREAM_PROPS = (

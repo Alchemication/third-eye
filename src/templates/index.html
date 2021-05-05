@@ -20,6 +20,17 @@
             <img src="{{ url_for('static', path='/eye.png') }}" width="25" alt="">
             <img src="{{ url_for('static', path='/eye.png') }}" width="10" alt="">
             Third Eye</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText"
+                aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarText">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            </ul>
+            <span id="last-heart-beat-time" class="navbar-text">
+                Loading heart-beat...
+            </span>
+        </div>
     </div>
 </nav>
 
@@ -76,6 +87,29 @@
 <!-- Custom JS -->
 <script>
     (() => {
+
+        /**
+         * Keep fetching last heart beat timestamp, and update DOM element
+         * @returns {array}
+         */
+        const startHeartBeatTimer = async (heartBeatContainer) => {
+            const response = await fetch(`/heart-beat`);
+            if (response.status === 200) {
+                // read Json response
+                const responseJson = await response.json();
+                // update DOM, show heart or umbrella, depending if health is ok
+                const heartBeatHealth = responseJson.is_ok ? '❤' : '☂';
+                heartBeatContainer.innerText = `${heartBeatHealth} ${new Date(responseJson.hb.create_ts)}`;
+            } else {
+                // @TODO: Handle errors more gracefully here
+                console.error('**ERROR**', response.status, response.statusText);
+                window.alert(`ERROR. Code: ${response.status}, msg: ${response.statusText}`)
+            }
+            // run again itself in 30 seconds
+            setTimeout(() => {
+                startHeartBeatTimer(heartBeatContainer)
+            }, 30000);
+        };
 
         /**
          * Fetch analysis details
@@ -148,7 +182,7 @@
                     tickfont: {color: '#999'},
                 },
                 plot_bgcolor:"#212529",
-                paper_bgcolor:"#212529"
+                paper_bgcolor: "#212529"
             };
             // additional config
             const config = {
@@ -158,20 +192,6 @@
             // render plot
             Plotly.newPlot(targetEl, [traceHist, traceToday], layout, config);
         };
-
-        // use to emulate touch events in the browser
-        TouchEmulator();
-
-        // define DOM elements to manipulate in the process
-        const contentContainer = document.querySelector('#content-container');
-        const videoStream = document.querySelector('#video-stream');
-        const motionAnalysis = document.querySelector('#motion-analysis');
-        const motionAnalysisLoader = document.querySelector('#motion-analysis-loader');
-        const objectsAnalysis = document.querySelector('#objects-analysis');
-        const objectsAnalysisLoader = document.querySelector('#objects-analysis-loader');
-        const btnVideoStream = document.querySelector('#btn-video-stream');
-        const btnMotionAnalysis = document.querySelector('#btn-motion-analysis');
-        const btnObjectsAnalysis = document.querySelector('#btn-objects-analysis');
 
         // show correct content section based on the user's selection
         const displayContent = async idx => {
@@ -219,6 +239,24 @@
                 objectsAnalysisLoader.style.display = 'none';
             }
         };
+
+        // define DOM elements to manipulate in the process
+        const contentContainer = document.querySelector('#content-container');
+        const videoStream = document.querySelector('#video-stream');
+        const motionAnalysis = document.querySelector('#motion-analysis');
+        const motionAnalysisLoader = document.querySelector('#motion-analysis-loader');
+        const objectsAnalysis = document.querySelector('#objects-analysis');
+        const objectsAnalysisLoader = document.querySelector('#objects-analysis-loader');
+        const btnVideoStream = document.querySelector('#btn-video-stream');
+        const btnMotionAnalysis = document.querySelector('#btn-motion-analysis');
+        const btnObjectsAnalysis = document.querySelector('#btn-objects-analysis');
+        const heartBeat = document.querySelector('#last-heart-beat-time');
+
+        // use to emulate touch events in the browser
+        TouchEmulator();
+
+        // set up a timer to poll for last heart beat every N-seconds
+        startHeartBeatTimer(heartBeat);
 
         // keep track of the selected content (start on Video-Feed, i.e. index=0)
         let contentIdx = 0;
