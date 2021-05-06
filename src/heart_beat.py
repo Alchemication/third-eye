@@ -74,7 +74,7 @@ def hear_beat_monitor():
 
         # restart backend process
         # construct command
-        CMD = f'sudo supervisorctl restart third-eye-backend'
+        CMD = f'/usr/bin/sudo /usr/bin/supervisorctl restart third-eye-backend'
         logging.info(f'Executing cmd: {CMD}')
 
         # execute CLI process
