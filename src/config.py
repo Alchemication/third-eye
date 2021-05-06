@@ -23,6 +23,7 @@ IMG_FOLDER = '/home/pi/Laboratory/third-eye-images'
 # low-noise mode)
 LOGGING_LEVEL = logging.INFO
 LOGGING_FORMAT = "%(asctime)s.%(msecs)03f - %(name)s - %(levelname)s - %(message)s"
+LOGGING_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 # do SQL queries need to be displayed (sql-alchemy parameter)?
 LOG_DB_EVENTS = False

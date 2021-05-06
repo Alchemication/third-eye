@@ -111,9 +111,8 @@ def main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt="%H:%M:%S")
+    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt=config.LOGGING_DATE_FORMAT)
     logger = logging.getLogger()
-
     # kick off hear_beat_monitor in a separate thread
     t = threading.Thread(target=hear_beat_monitor)
     t.daemon = True

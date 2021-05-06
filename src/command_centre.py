@@ -186,7 +186,7 @@ def process_email(*args):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt="%H:%M:%S")
+    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt=config.LOGGING_DATE_FORMAT)
     logger = logging.getLogger()
 
     create_listener()

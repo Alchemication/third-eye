@@ -73,7 +73,7 @@ def populate(dts: list, db_table: str) -> int:
 
 if __name__ == '__main__':
     # set up logger
-    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt="%H:%M:%S")
+    logging.basicConfig(format=config.LOGGING_FORMAT, level=config.LOGGING_LEVEL, datefmt=config.LOGGING_DATE_FORMAT)
     logger = logging.getLogger()
 
     parser = argparse.ArgumentParser(description='Sample data generator')
