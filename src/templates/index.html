@@ -52,17 +52,17 @@
         <img src="{{ video_feed_url }}" class="figure-img img-fluid rounded" alt="Video Feed">
         <figcaption class="figure-caption text-end">Live Stream For: {{ hostname }}</figcaption>
     </figure>
-    <figure class="figure" id="motion-analysis" style="height: 450px">
+    <figure class="figure" id="motion-analysis" style="height: 400px">
         <div class="d-flex justify-content-center">
             <div class="spinner-border text-secondary" role="status" id="motion-analysis-loader">
-              <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
         </div>
     </figure>
-    <figure class="figure" id="objects-analysis" style="height: 450px">
+    <figure class="figure" id="objects-analysis" style="height: 400px">
         <div class="d-flex justify-content-center">
             <div class="spinner-border text-secondary" role="status" id="objects-analysis-loader">
-              <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
         </div>
     </figure>
@@ -140,9 +140,9 @@
             const hist = [];
             const today = [];
             results.forEach(el => {
-               x.push(el.Hour);
-               hist.push(el.Historical);
-               today.push(el.Today);
+                x.push(`${el.Hour}:00`);
+                hist.push(el.Historical);
+                today.push(el.Today);
             });
             // define traces
             const traceHist = {
@@ -165,19 +165,32 @@
             const layout = {
                 autosize: true,
                 title: {
-                    text: `Hourly ${type} Analysis - Last 6 days avg vs Today`,
-                    font: {color: '#DDD'}
+                    text: `Today's Detections vs 6 days avg`,
+                    font: {color: '#DDD'},
                 },
+                margin: {
+                    t: 50,
+                    b: 50,
+                    l: 25,
+                    r: 15,
+                    pad: 0
+                },
+                // showlegend: false, // turn off legend
                 legend: {
-                    font: {color: '#DDD'}
+                    font: {color: '#DDD'},
+                    // orientation: "h" // better for mobiles,
+                    x: 0.5,
+                    xanchor: 'right',
+                    y: 0.985
                 },
                 xaxis: {
-                    title: 'Hour',
+                    // title: 'Hour',
                     titlefont: {color: '#DDD'},
-                    tickfont: {color: '#999'},
+                    tickfont: {color: '#999'}
                 },
                 yaxis: {
-                    title: 'Detection Count',
+                    // title: 'Detections Count',
+                    standoff: 0,
                     titlefont: {color: '#DDD'},
                     tickfont: {color: '#999'},
                 },
