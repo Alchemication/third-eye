@@ -15,8 +15,8 @@ APP_DEBUG_MODE = False
 
 # paths
 BASE_DIR = '/home/pi/Laboratory/third-eye'
-DB_FILE_PATH = '/home/pi/Laboratory/third-eye-db/app.db'
-IMG_FOLDER = '/home/pi/Laboratory/third-eye-images'
+DB_FILE_PATH = f'{BASE_DIR}-db/app.db'
+IMG_FOLDER = f'{BASE_DIR}-images'
 
 # define how console logs will be displayed (default INFO,
 # set to DEBUG for troubleshooting and dev, and ERROR for
@@ -40,6 +40,8 @@ HEART_BEAT_PUB_URL = 'tcp://*:5555'
 HEART_BEAT_SUB_URL = 'tcp://127.0.0.1:5555'
 HEART_BEAT_INTERVAL_N_FRAMES = 200
 HEART_BEAT_INTERVAL_MAX_IDLE_N_SEC = 60
+HEART_BEAT_IMAGES_KEEP_N_DAYS = 14
+HEART_BEAT_FILES_IDENTIFIER = 'HEART-BEAT'
 
 # Set up stream properties, set these if the camera used requires some adjustments
 STREAM_PROPS = (
