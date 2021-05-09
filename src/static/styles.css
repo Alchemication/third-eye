@@ -13,3 +13,25 @@ h5 {
 #objects-analysis {
     display: none;
 }
+
+#forensics {
+    display: none;
+    color: #DDD;
+}
+
+#spinner {
+    display: none;
+}
+
+@keyframes rotating {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.rotating {
+    animation: rotating 2s linear infinite;
+}

@@ -6,9 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=8, user-scalable=yes">
 
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
-    <link href="{{ url_for('static', path='/styles.css?id={{ cache_id }}') }}" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-wEmeIV1mKuiNpC+IOBjI7aAzPcEZeedi5yW5f2yOq55WWLwNGmvvx4Um1vskeMj0"
+          crossorigin="anonymous">
+    <link href="{{ url_for('static', path='/styles.css?id=' ~ cache_id) }}" rel="stylesheet">
 
     <title>ThirdEye - {{ hostname }}</title>
 </head>
@@ -17,9 +18,9 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="#" style="color: #2f353c;">
             <img src="{{ url_for('static', path='/eye.png') }}" width="10" alt="">
-            <img src="{{ url_for('static', path='/eye.png') }}" width="25" alt="">
+            <img id="eye" src="{{ url_for('static', path='/eye.png') }}" width="25" alt="">
             <img src="{{ url_for('static', path='/eye.png') }}" width="10" alt="">
-            Third Eye</a>
+            Third Eye <span id="spinner">...</span></a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText"
                 aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -28,8 +29,8 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             </ul>
             <span id="last-heart-beat-time" class="navbar-text">
-                Loading heart-beat...
-            </span>
+                        Loading heart-beat...
+                    </span>
         </div>
     </div>
 </nav>
@@ -40,11 +41,17 @@
         <div class="col d-flex justify-content-center">
             <div class="btn-group" role="group">
                 <button type="button" id="btn-video-stream" class="btn btn-outline-info btn-sm active">
-                    Video Stream</button>
+                    Live Stream
+                </button>
                 <button type="button" id="btn-motion-analysis" class="btn btn-outline-info btn-sm">
-                    Motion Analysis</button>
+                    Motion
+                </button>
                 <button type="button" id="btn-objects-analysis" class="btn btn-outline-info btn-sm">
-                    Objects Analysis</button>
+                    Object Detection
+                </button>
+                <button type="button" id="btn-forensics" class="btn btn-outline-info btn-sm">
+                    Forensics
+                </button>
             </div>
         </div>
     </div>
@@ -52,26 +59,32 @@
         <img src="{{ video_feed_url }}" class="figure-img img-fluid rounded" alt="Video Feed">
         <figcaption class="figure-caption text-end">Live Stream For: {{ hostname }}</figcaption>
     </figure>
-    <figure class="figure" id="motion-analysis" style="height: 400px">
+    <figure class="figure" id="motion-analysis" style="height: 400px"></figure>
+    <figure class="figure" id="objects-analysis" style="height: 400px"></figure>
+    <figure class="figure" id="forensics" style="height: 400px">
         <div class="d-flex justify-content-center">
-            <div class="spinner-border text-secondary" role="status" id="motion-analysis-loader">
-                <span class="visually-hidden">Loading...</span>
+            <div class="col text-center" style="background-color: green;">
+                Select Dates
             </div>
         </div>
-    </figure>
-    <figure class="figure" id="objects-analysis" style="height: 400px">
         <div class="d-flex justify-content-center">
-            <div class="spinner-border text-secondary" role="status" id="objects-analysis-loader">
-                <span class="visually-hidden">Loading...</span>
+            <div class="col text-center" style="background-color: blue;">
+                Select Time
+            </div>
+        </div>
+        <div class="d-flex justify-content-center">
+            <div class="col text-center" style="background-color: red;">
+                Images
             </div>
         </div>
     </figure>
 </div>
 
 <!-- Bootstrap Bundle with Popper -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
-        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-p34f1UUtsS3wqzfto5wAAmdvj+osOnFyQFpp4Ua3gs/ZVWx6oOypYoCJhGGScy+8"
+        crossorigin="anonymous">
+</script>
 
 <!-- Hammer.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"
@@ -85,236 +98,6 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
 <!-- Custom JS -->
-<script>
-    (() => {
-
-        /**
-         * Keep fetching last heart beat timestamp, and update DOM element
-         * @returns {array}
-         */
-        const startHeartBeatTimer = async (heartBeatContainer) => {
-            const response = await fetch(`/heart-beat`);
-            if (response.status === 200) {
-                // read Json response
-                const responseJson = await response.json();
-                // update DOM, show heart or umbrella, depending if health is ok
-                const heartBeatHealth = responseJson.is_ok ? '❤' : '☂';
-                heartBeatContainer.innerText = `${heartBeatHealth} ${new Date(responseJson.hb.create_ts)}`;
-            } else {
-                // @TODO: Handle errors more gracefully here
-                console.error('**ERROR**', response.status, response.statusText);
-                window.alert(`ERROR. Code: ${response.status}, msg: ${response.statusText}`)
-            }
-            // run again itself in 30 seconds
-            setTimeout(() => {
-                startHeartBeatTimer(heartBeatContainer)
-            }, 30000);
-        };
-
-        /**
-         * Fetch analysis details
-         * @param {string} analysisType [motion, objects]
-         * @returns {array}
-         */
-        const fetchAnalysis = async (analysisType) => {
-            const response = await fetch(`/analysis?at=${analysisType}`);
-            if (response.status === 200) {
-                return await response.json();
-            } else {
-                // @TODO: Handle errors more gracefully here
-                console.error('**ERROR**', response.status, response.statusText);
-                window.alert(`ERROR. Code: ${response.status}, msg: ${response.statusText}`)
-                return null;
-            }
-        };
-
-        /**
-         * Render Plotly line graph for a list of objects
-         * @param {array} results
-         * @param {string} type
-         * @param {object} targetEl
-         */
-        const renderPlot = (results, type, targetEl) => {
-            // extract properties from objects
-            const x = [];
-            const hist = [];
-            const today = [];
-            results.forEach(el => {
-                x.push(`${el.Hour}:00`);
-                hist.push(el.Historical);
-                today.push(el.Today);
-            });
-            // define traces
-            const traceHist = {
-                name: 'Last 6 Days avg',
-                x: x,
-                y: hist,
-                mode: 'lines+markers',
-                type: 'scatter',
-                line: {color: '#666'}
-            }
-            const traceToday = {
-                name: 'Today',
-                x: x,
-                y: today,
-                mode: 'lines+markers',
-                type: 'scatter',
-                line: {color: '#18a2b8'}
-            }
-            // configure layout
-            const layout = {
-                autosize: true,
-                title: {
-                    text: `Today's Detections vs 6 days avg`,
-                    font: {color: '#DDD'},
-                },
-                margin: {
-                    t: 50,
-                    b: 50,
-                    l: 25,
-                    r: 15,
-                    pad: 0
-                },
-                // showlegend: false, // turn off legend
-                legend: {
-                    font: {color: '#DDD'},
-                    // orientation: "h" // better for mobiles,
-                    x: 0.5,
-                    xanchor: 'right',
-                    y: 0.985
-                },
-                xaxis: {
-                    // title: 'Hour',
-                    titlefont: {color: '#DDD'},
-                    tickfont: {color: '#999'}
-                },
-                yaxis: {
-                    // title: 'Detections Count',
-                    standoff: 0,
-                    titlefont: {color: '#DDD'},
-                    tickfont: {color: '#999'},
-                },
-                plot_bgcolor:"#212529",
-                paper_bgcolor: "#212529"
-            };
-            // additional config
-            const config = {
-                responsive: true,
-                displayModeBar: false // never show the top bar with Plotly options (it's kinda redundant)
-            };
-            // render plot
-            Plotly.newPlot(targetEl, [traceHist, traceToday], layout, config);
-        };
-
-        // show correct content section based on the user's selection
-        const displayContent = async idx => {
-            if (idx === 0) {
-                // show video stream, remove other sections
-                videoStream.style.display = 'grid';
-                motionAnalysis.style.display = 'none';
-                objectsAnalysis.style.display = 'none';
-                btnVideoStream.classList.add('active');
-                btnMotionAnalysis.classList.remove('active');
-                btnObjectsAnalysis.classList.remove('active');
-            } else if (idx === 1) {
-                // show motion analysis & remove other sections
-                videoStream.style.display = 'none';
-                motionAnalysis.style.display = 'grid';
-                objectsAnalysis.style.display = 'none';
-                motionAnalysisLoader.style.display = 'grid';
-                btnVideoStream.classList.remove('active');
-                btnMotionAnalysis.classList.add('active');
-                btnObjectsAnalysis.classList.remove('active');
-                // fetch latest motion analysis data
-                const results = await fetchAnalysis('motion');
-                // render plotly graph
-                if (results) {
-                    renderPlot(results, 'Motion', motionAnalysis);
-                }
-                // hide loader
-                motionAnalysisLoader.style.display = 'none';
-            } else {
-                // show objects analysis & remove other sections
-                videoStream.style.display = 'none';
-                motionAnalysis.style.display = 'none';
-                objectsAnalysis.style.display = 'grid';
-                objectsAnalysisLoader.style.display = 'grid';
-                btnVideoStream.classList.remove('active');
-                btnMotionAnalysis.classList.remove('active');
-                btnObjectsAnalysis.classList.add('active');
-                // fetch latest objects analysis data
-                const results = await fetchAnalysis('objects');
-                // render plotly graph
-                if (results) {
-                    renderPlot(results['person'], '[Person] Object', objectsAnalysis);
-                }
-                // render plotly graph
-                objectsAnalysisLoader.style.display = 'none';
-            }
-        };
-
-        // define DOM elements to manipulate in the process
-        const contentContainer = document.querySelector('#content-container');
-        const videoStream = document.querySelector('#video-stream');
-        const motionAnalysis = document.querySelector('#motion-analysis');
-        const motionAnalysisLoader = document.querySelector('#motion-analysis-loader');
-        const objectsAnalysis = document.querySelector('#objects-analysis');
-        const objectsAnalysisLoader = document.querySelector('#objects-analysis-loader');
-        const btnVideoStream = document.querySelector('#btn-video-stream');
-        const btnMotionAnalysis = document.querySelector('#btn-motion-analysis');
-        const btnObjectsAnalysis = document.querySelector('#btn-objects-analysis');
-        const heartBeat = document.querySelector('#last-heart-beat-time');
-
-        // use to emulate touch events in the browser
-        TouchEmulator();
-
-        // set up a timer to poll for last heart beat every N-seconds
-        startHeartBeatTimer(heartBeat);
-
-        // keep track of the selected content (start on Video-Feed, i.e. index=0)
-        let contentIdx = 0;
-
-        // add tap event to the top buttons,
-        // display appropriate content based on the selection
-        new Hammer(btnVideoStream).on('tap', ev => {
-            contentIdx = 0;
-            displayContent(contentIdx);
-        });
-        new Hammer(btnMotionAnalysis).on('tap', ev => {
-            contentIdx = 1;
-            displayContent(contentIdx);
-        });
-        new Hammer(btnObjectsAnalysis).on('tap', ev => {
-            contentIdx = 2;
-            displayContent(contentIdx);
-        });
-
-        // set up swipe left/right events on the content
-        new Hammer(contentContainer).on('swipeleft swiperight', ev => {
-            switch (ev.type) {
-                case 'swiperight':
-                    // return early if we've swiped to the far left
-                    if (contentIdx === 0) {
-                        return;
-                    }
-                    // decrement content index (as we are moving left)
-                    contentIdx -= 1;
-                    break;
-                case 'swipeleft':
-                    // return early if we've swiped to the far right
-                    if (contentIdx === 2) {
-                        return;
-                    }
-                    // increment content index (as we are moving right)
-                    contentIdx += 1;
-                    break;
-                default:
-                    break;
-            }
-            // render appropriate element, based on the content index
-            displayContent(contentIdx);
-        });
-    })();
-</script>
+<script src="{{ url_for('static', path='/script.js') }}"></script>
 </body>
 </html>

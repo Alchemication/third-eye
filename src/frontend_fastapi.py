@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from typing import Optional
 import config
 from socket import gethostname
 import random
@@ -19,7 +20,11 @@ logger = logging.getLogger()
 logging.info('Starting FastAPI app...')
 app = FastAPI()
 
+# mount static folders
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/images", StaticFiles(directory=config.IMG_FOLDER), name="images")
+
+# point Jinja2 to templates directory
 templates = Jinja2Templates(directory="templates")
 
 
@@ -66,3 +71,22 @@ async def heart_beat():
     except Exception as e:
         return {"**ERROR**": str(e)}, 500
     return {"hb": last_heart_beat, "is_ok": heart_beat_status}
+
+
+@app.get('/get-images')
+async def get_images(dates: Optional[str] = None,
+                     time_start: Optional[int] = None,
+                     time_end: Optional[int] = None,
+                     inc_heart_beat: Optional[bool] = True,
+                     inc_motion: Optional[bool] = True,
+                     inc_objects: Optional[bool] = True,
+                     inc_intruders: Optional[bool] = True):
+    return {
+        'dates': dates,
+        'time_start': time_start,
+        'time_end': time_end,
+        'inc_heart_beat': inc_heart_beat,
+        'inc_motion': inc_motion,
+        'inc_objects': inc_objects,
+        'inc_intruders': inc_intruders
+    }
