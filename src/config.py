@@ -40,7 +40,6 @@ HEART_BEAT_PUB_URL = 'tcp://*:5555'
 HEART_BEAT_SUB_URL = 'tcp://127.0.0.1:5555'
 HEART_BEAT_INTERVAL_N_FRAMES = 200
 HEART_BEAT_INTERVAL_MAX_IDLE_N_SEC = 60
-HEART_BEAT_IMAGES_KEEP_N_DAYS = 7
 HEART_BEAT_FILES_IDENTIFIER = 'HEART-BEAT'
 
 # Set up stream properties, set these if the camera used requires some adjustments
@@ -111,6 +110,9 @@ SECURITY_ON_OVERRIDE_HOURS = [(24, 4)]
 
 # define objects, which can trigger security alerts
 INTRUDER_OBJECTS = ['person', 'cat', 'dog']
+
+# define intruder image identification string
+INTRUDER_FILES_IDENTIFIER = 'INTRUDER'
 
 # if objects of interest have been detected in an image,
 # wait this many seconds before checking if alert needs to be triggered

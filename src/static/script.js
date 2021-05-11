@@ -12,7 +12,8 @@
             const responseJson = await response.json();
             // update DOM, show heart or umbrella, depending if health is ok
             const heartBeatHealth = responseJson.is_ok ? '❤' : '☂';
-            heartBeatContainer.innerText = `${heartBeatHealth} ${new Date(responseJson.hb.create_ts)}`;
+            const ts = moment(responseJson.hb.create_ts);
+            heartBeatContainer.innerText = `${heartBeatHealth} Last Heart Beat: ${ts.calendar()}`;
         } else {
             // @TODO: Handle errors more gracefully here
             console.error('**ERROR**', response.status, response.statusText);
@@ -59,7 +60,7 @@
         });
         // define traces
         const traceHist = {
-            name: 'Last 6 Days avg',
+            name: `Last ${parseInt(configAttrs.teUseHistoricalDays, 10) - 1} Days avg`,
             x: x,
             y: hist,
             mode: 'lines+markers',
@@ -146,7 +147,6 @@
             // show motion analysis & remove other sections
             hideSpinner();
             videoStream.style.display = 'none';
-            motionAnalysis.style.display = 'grid';
             objectsAnalysis.style.display = 'none';
             forensics.style.display = 'none';
             btnVideoStream.classList.remove('active');
@@ -156,6 +156,7 @@
             // fetch latest motion analysis data
             showSpinner('Fetching results...');
             const results = await fetchAnalysis('motion');
+            motionAnalysis.style.display = 'grid';
             // render plotly graph
             if (results) {
                 renderPlot(results, 'Motion', motionAnalysis);
@@ -166,7 +167,6 @@
             hideSpinner();
             videoStream.style.display = 'none';
             motionAnalysis.style.display = 'none';
-            objectsAnalysis.style.display = 'grid';
             forensics.style.display = 'none';
             btnVideoStream.classList.remove('active');
             btnMotionAnalysis.classList.remove('active');
@@ -175,6 +175,7 @@
             // fetch latest objects analysis data
             showSpinner('Fetching results...');
             const results = await fetchAnalysis('objects');
+            objectsAnalysis.style.display = 'grid';
             // render plotly graph
             if (results) {
                 renderPlot(results['person'], '[Person] Object', objectsAnalysis);
@@ -191,15 +192,22 @@
             btnMotionAnalysis.classList.remove('active');
             btnObjectsAnalysis.classList.remove('active');
             btnForensics.classList.add('active');
-            // fetch latest objects analysis data
-            showSpinner('Fetching results...');
-            console.log('Forensics');
-            // fetch config data to set the gallery
-            // hideSpinner();
+            // pre-populate dates and times
+            fromDate.value = maxDate.format(DATE_FORMAT);
+            fromDate.min = minDate.format(DATE_FORMAT);
+            fromDate.max = maxDate.format(DATE_FORMAT);
+            toDate.value = maxDate.format(DATE_FORMAT);
+            toDate.min = minDate.format(DATE_FORMAT);
+            toDate.max = maxDate.format(DATE_FORMAT);
+            fromTime.value = minDefaultTime;
+            toTime.value = maxDefaultTime;
         } else {
             throw new Error('Undefined element index reached');
         }
     };
+
+    // extract configuration params from data attribute(s)
+    const configAttrs = document.querySelector('body').dataset
 
     // define DOM elements to manipulate in the process
     const contentContainer = document.querySelector('#content-container');
@@ -214,6 +222,11 @@
     const heartBeat = document.querySelector('#last-heart-beat-time');
     const spinner = document.querySelector('#spinner');
     const eye = document.querySelector('#eye');
+    const btnShowSlideshow = document.querySelector('#show-slideshow');
+    const fromDate = document.querySelector('#from-date');
+    const toDate = document.querySelector('#to-date');
+    const fromTime = document.querySelector('#from-time');
+    const toTime = document.querySelector('#to-time');
 
     // use to emulate touch events in the browser
     TouchEmulator();
@@ -222,8 +235,14 @@
     startHeartBeatTimer(heartBeat);
 
     // keep track of the selected content (start on Video-Feed, i.e. index=0)
-    // TODO: read initial index from URL
     let contentIdx = 0;
+
+    // calculate default start/end dates/times
+    const minDate = moment().subtract(parseInt(configAttrs.teUseHistoricalDays, 10), 'days');
+    const maxDate = moment();
+    const minDefaultTime = '07:00';
+    const maxDefaultTime = '21:00';
+    const DATE_FORMAT = 'YYYY-MM-DD';
 
     // add tap event to the top buttons,
     // display appropriate content based on the selection
@@ -242,6 +261,53 @@
     new Hammer(btnForensics).on('tap', ev => {
         contentIdx = 3;
         displayContent(contentIdx);
+    });
+
+    // add tap event to SHow Slideshow button in Forensics section
+    new Hammer(btnShowSlideshow).on('tap', async ev => {
+        // get checked image types
+        const imTypes = ['HEART-BEAT', 'INTRUDER'].map(el => {
+            return document.querySelector(`#${el}`).checked ? el : null;
+        }).filter(el => el).join(',');
+        if (!imTypes) {
+            window.alert('Please make sure at least one image type is selected');
+            return;
+        }
+        // get values from date and time pickers
+        const fromDateVal = fromDate.value;
+        const toDateVal = toDate.value;
+        const fromTimeVal = fromTime.value;
+        const toTimeVal = toTime.value;
+        if (!fromDateVal || !toDateVal || !fromTimeVal || !toTimeVal) {
+            window.alert('Please make sure that all date and time inputs are provided');
+            return;
+        }
+        // send a request to API to retrieve relevant images
+        const response = await fetch(`/get-images?inc_im_types=${imTypes}&from_date=${fromDateVal}
+            &to_date=${toDateVal}&from_time=${fromTimeVal}&to_time=${toTimeVal}`);
+        if (response.status === 200) {
+            const results = await response.json();
+            if (results.files.length === 0) {
+                window.alert('Search criteria did not return any images, try to refine it')
+                return;
+            }
+            let i = 0;
+            const gallery = results.files.map(el => {
+                const imgTs = moment(results.timestamps[i]);
+                i++;
+                return {
+                    src: `/images/${el}`,
+                    title: imgTs.calendar(),
+                    description: `Full Date: ${imgTs.format('llll')} | Image Type: ${el.split('_')[1].split('.')[0]}`
+                };
+            });
+            Spotlight.show(gallery);
+        } else {
+            // @TODO: Handle errors more gracefully here
+            console.error('**ERROR**', response.status, response.statusText);
+            window.alert(`ERROR. Code: ${response.status}, msg: ${response.statusText}`)
+            return null;
+        }
     });
 
     // set up swipe left/right events on the content

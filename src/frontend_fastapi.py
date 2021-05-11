@@ -3,7 +3,9 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
-from typing import Optional
+import pandas as pd
+from datetime import datetime
+import os
 import config
 from socket import gethostname
 import random
@@ -30,7 +32,7 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    """Render main HTML template"""
+    """Render main HTML template and pass required view variables"""
     # create a random number (handy to prevent browser caching issues)
     cache_id = random.random()
     # find out the stream URL (use public URL if a stream is currently open,
@@ -42,7 +44,11 @@ async def read_root(request: Request):
         "msg": "Hello, World",
         "video_feed_url": stream_url,
         "cache_id": cache_id,
-        "hostname": gethostname()
+        "hostname": gethostname(),
+        "config": {
+            "file_identifiers": [config.INTRUDER_FILES_IDENTIFIER, config.HEART_BEAT_FILES_IDENTIFIER],
+            "use_historical_days": config.USE_HISTORICAL_DAYS
+        }
     })
 
 
@@ -74,19 +80,24 @@ async def heart_beat():
 
 
 @app.get('/get-images')
-async def get_images(dates: Optional[str] = None,
-                     time_start: Optional[int] = None,
-                     time_end: Optional[int] = None,
-                     inc_heart_beat: Optional[bool] = True,
-                     inc_motion: Optional[bool] = True,
-                     inc_objects: Optional[bool] = True,
-                     inc_intruders: Optional[bool] = True):
-    return {
-        'dates': dates,
-        'time_start': time_start,
-        'time_end': time_end,
-        'inc_heart_beat': inc_heart_beat,
-        'inc_motion': inc_motion,
-        'inc_objects': inc_objects,
-        'inc_intruders': inc_intruders
-    }
+async def get_images(inc_im_types: str, from_date: str, to_date: str, from_time: str, to_time: str):
+    # image types will be easier to compare if they are a list
+    inc_im_types = inc_im_types.split(',')
+    filtered_files, filtered_timestamps = [], []
+    for dt in pd.date_range(from_date, to_date, freq='D'):
+        dt_dir = str(dt.date())
+        dt_full_path = f'{config.IMG_FOLDER}/{dt_dir}'
+        if not os.path.exists(dt_full_path):
+            continue
+        # define from timestamp and to timestamp
+        min_ts = datetime.strptime(f'{dt_dir} {from_time}', '%Y-%m-%d %H:%M')
+        max_ts = datetime.strptime(f'{dt_dir} {to_time}:59.999999', '%Y-%m-%d %H:%M:%S.%f')
+        all_images_in_path = [f for f in os.listdir(dt_full_path)]
+        all_images_in_path.sort()
+        for f in all_images_in_path:
+            img_ts = datetime.strptime(f'{dt_dir} {f[:13]}', '%Y-%m-%d %H%M%S.%f')
+            for im_type in inc_im_types:
+                if im_type in f and min_ts <= img_ts <= max_ts:
+                    filtered_files.append(f'{dt_dir}/{f}')
+                    filtered_timestamps.append(img_ts)
+    return {'files': filtered_files, 'timestamps': filtered_timestamps}

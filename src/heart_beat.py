@@ -68,7 +68,7 @@ def hear_beat_monitor():
 
             # calculate dates to keep based on configuration
             now = datetime.now()
-            min_date = now - timedelta(days=config.HEART_BEAT_IMAGES_KEEP_N_DAYS)
+            min_date = now - timedelta(days=config.USE_HISTORICAL_DAYS)
             keep_dates = [str(dt.date()) for dt in pd.date_range(min_date, now)]
 
             # figure out candidates for image deletion

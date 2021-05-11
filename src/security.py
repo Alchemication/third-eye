@@ -107,7 +107,7 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
         if not path.exists(date_folder):
             mkdir(date_folder)
         # save image in the images folder
-        img_name = f"{str(now)[11:].replace(':', '')}_INTRUDER.jpg"  # '203732.507061_INTRUDER.jpg'
+        img_name = f"{str(now)[11:].replace(':', '')}_{config.INTRUDER_FILES_IDENTIFIER}.jpg"
         cv2.imwrite(f'{date_folder}/{img_name}', curr_frame)
         logging.info(f'File {date_folder}/{img_name} saved')
 
