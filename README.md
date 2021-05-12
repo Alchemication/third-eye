@@ -90,6 +90,7 @@ ML models:
 - models/ contains labels and ssd_mobilenet model for object detection inference
 
 Other:
+
 - images folder
 - database folder
 - logs folder
@@ -99,12 +100,24 @@ stay in place. The first 2 folders can be configured via the config file.
 
 The `logs` folder is configured in CronJobs and Supervisor (see the Installation section).
 
+## DB Migrations (TBD)
+
+Commands:
+
+```bash
+alembic stamp head  # only needed initially
+alembic revision --autogenerate -m "<rev-message>"  # create a revision
+alembic history  # show version history
+alembic upgrade head  # upgrade automatically, add --sql flag to output SQL, and don't upgrade automatically
+alembic downgrade <version-to-downgrade-to>
+```
+
 ## Overclocking RPi
 
 It is possible to give RPi a little boost, but do it **at your risk**.
 
-See this great [article](https://magpi.raspberrypi.org/articles/how-to-overclock-raspberry-pi-4) for more info on
-that, and monitor your CPU temperature to avoid a nasty Cowabunga!
+See this great [article](https://magpi.raspberrypi.org/articles/how-to-overclock-raspberry-pi-4) for more info on that,
+and monitor your CPU temperature to avoid a nasty Cowabunga!
 
 ## Contributions/Feedback
 

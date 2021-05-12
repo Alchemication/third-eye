@@ -283,8 +283,10 @@
             return;
         }
         // send a request to API to retrieve relevant images
+        showSpinner('Fetching results...');
         const response = await fetch(`/get-images?inc_im_types=${imTypes}&from_date=${fromDateVal}
             &to_date=${toDateVal}&from_time=${fromTimeVal}&to_time=${toTimeVal}`);
+        hideSpinner()
         if (response.status === 200) {
             const results = await response.json();
             if (results.files.length === 0) {

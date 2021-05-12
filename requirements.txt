@@ -12,3 +12,4 @@ tqdm
 twilio
 email_listener
 imagezmq
+alembic
