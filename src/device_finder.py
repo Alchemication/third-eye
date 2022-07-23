@@ -19,7 +19,7 @@ def main():
     """
 
     # how many seconds to sleep for between checks
-    SLEEP_TIME = 20
+    SLEEP_TIME = 30
 
     try:
         while True:  # receive images until Ctrl-C is pressed

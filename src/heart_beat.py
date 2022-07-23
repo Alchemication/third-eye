@@ -22,7 +22,6 @@ import threading
 from models import HeartBeat
 from datetime import datetime, timedelta
 from database import Session
-from twilio.rest import Client
 
 
 def is_healthy(heart_beat: HeartBeat) -> bool:
@@ -94,24 +93,11 @@ def hear_beat_monitor():
         # determine if last heart beat occurred within specified time
         heart_beat_status = is_healthy(last_heart_beat)
 
-        # if heart beat is not healthy - trigger notification
+        # if heart beat is not healthy - restart backend process
         if not heart_beat_status:
-            # send text alert to admin
-            logging.info('Sending SMS Notification (heart beat detected frozen stream)')
-            try:
-                msg_body = f'Third Eye noticed a problem with the video stream. Backend process will be restarted'
-                client = Client(config.TWILIO_SID, config.TWILIO_AUTH_TOKEN)
-                for p in config.NOTIFY_PHONE_NUMBERS:
-                    message = client.messages.create(body=msg_body, from_=config.TWILIO_PHONE_NUMBER, to=p)
-                    sms_msg_sid = message.sid
-                    logging.info(f'Message sent to Twilio, message id: {sms_msg_sid}')
-            except Exception as e:
-                logging.error(f'SMS error: {str(e)}')
-
-            # restart backend process
             # construct command
             CMD = f'/usr/bin/sudo /usr/bin/supervisorctl restart third-eye-backend'
-            logging.info(f'Executing cmd: {CMD}')
+            logging.info(f'Video stalled, restarting backend: {CMD}')
 
             # execute CLI process
             p = subprocess.Popen(CMD.split(' '), stdout=subprocess.PIPE)

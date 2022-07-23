@@ -8,13 +8,8 @@ import numpy as np
 from models import ObjectDetection, Alert, HomeOccupancy
 from database import engine, Session
 from os import path, mkdir
-from twilio.rest import Client
-import smtplib
-import ssl
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+
+from mailer import send
 
 
 def find_owners_at_home(db_conn) -> list:
@@ -129,15 +124,14 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
 
         # trigger alert
         logging.info(f'Last alert sent at {str(last_alert.create_ts)}. Trigger alert')
-        intruders, msg_id, mail_resp = trigger_alert(detections, date_folder, img_name)
+        intruders = trigger_alert(detections, date_folder, img_name)
 
         # update alert in the DB with other relevant info and indicate it was triggered
         a.update_ts = datetime.now()
         a.alert_status = 'triggered'
         a.alert_metadata = {
             'intruders': intruders,
-            'msg_id': msg_id,
-            'mail_resp': mail_resp,
+            'mail_resp': "OK",
             'img_path': f'{date_folder}/{img_name}',
             'prev_alert': str(last_alert.create_ts),
             'checked_intruder_objects': config.INTRUDER_OBJECTS
@@ -153,7 +147,7 @@ def check_alerts(detections: List[ObjectDetection], curr_frame: np.array) -> boo
     return False
 
 
-def trigger_alert(detections: List[ObjectDetection], img_folder: str, filename: str) -> tuple:
+def trigger_alert(detections: List[ObjectDetection], img_folder: str, filename: str) -> list:
     """
     Send an email or/and sms notification to home owners
     Returns a list of identified labels, sms ID (or None if disabled)
@@ -164,77 +158,16 @@ def trigger_alert(detections: List[ObjectDetection], img_folder: str, filename: 
     intruder_labels = [i.label for i in detections]
     msg_body = f'Third Eye registered potential silent intruders: {", ".join(intruder_labels)}.'
 
-    # send sms
-    sms_msg_sid = None
-    if config.SMS_NOTIFICATIONS_ENABLED:
-        logging.info('Sending SMS Notification')
-        try:
-            client = Client(config.TWILIO_SID, config.TWILIO_AUTH_TOKEN)
-            for p in config.NOTIFY_PHONE_NUMBERS:
-                message = client.messages.create(body=msg_body, from_=config.TWILIO_PHONE_NUMBER, to=p)
-                sms_msg_sid = message.sid
-                logging.info(f'Message sent to Twilio, message id: {sms_msg_sid}')
-        except Exception as e:
-            logging.error(f'SMS error: {str(e)}')
-
     # send email
     email_resp = None
     if config.EMAIL_NOTIFICATIONS_ENABLED:
         logging.info('Sending Email Notification')
-        message = MIMEMultipart("alternative")
-        message["Subject"] = f"Third Eye alert - {str(datetime.now())}"
 
-        # Create the plain-text and HTML version of the message
-        plain_text = msg_body
-        html = f"""
-        <html>
-          <body>
-            <p>Hey there,<br>
-               {msg_body}
-            </p>
-          </body>
-        </html>
-        """
-
-        # Turn these into plain/html MIMEText objects
-        part1 = MIMEText(plain_text, "plain")  # this will be displayed on Apple Watch (for example)
-        part2 = MIMEText(html, "html")  # this will be displayed in most of email clients
-
-        # Add HTML/plain-text parts to MIMEMultipart message
-        # The email client will try to render the last part first
-        message.attach(part1)
-        message.attach(part2)
-
-        # Open file in binary mode
-        with open(f'{img_folder}/{filename}', "rb") as attachment:
-            # Add file as application/octet-stream
-            # Email client can usually download this automatically as attachment
-            part = MIMEBase("application", "octet-stream")
-            part.set_payload(attachment.read())
-        encoders.encode_base64(part)
-
-        # Add header as key/value pair to attachment part
-        part.add_header(
-            "Content-Disposition",
-            f"attachment; filename= {filename}",
-        )
-
-        # Add attachment to message
-        message.attach(part)
-
-        # Log in to server using secure context and send email
-        context = ssl.create_default_context()
-        try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-                server.login(config.EMAIL_SENDER_ADDRESS, config.EMAIL_SENDER_PASSWORD)
-                email_resp = server.sendmail(config.EMAIL_SENDER_ADDRESS, config.RECEIVER_EMAIL_ADDRESSES,
-                                            message.as_string())
-                logging.info(f'Email sent. Server response: {str(email_resp)}')
-        except Exception as e:
-            logging.error(f'Email error: {str(e)}')
+        # Send mail
+        send(msg_body, f'{img_folder}/{filename}')
 
         # return all elements
-        return intruder_labels, sms_msg_sid, email_resp
+        return intruder_labels
 
 
 def is_hr_between(time: int, time_range: tuple) -> bool:

@@ -6,21 +6,15 @@ The key benefits of such an approach are:
 - enhanced security
 - data privacy
 - portability
-- low cost, and low power consumption
+- low(ish) cost - given the capabilities & flexibility, and low power consumption
 
 Third Eye can:
 - analyse a scene 
 - perform motion detection & object detection
 - collect data and show useful statistics
 - trigger security alerts when it's required
-- **Coming Soon:** talk to system via sms or email (disarm, arm, enable video stream)
 
-It can be also hacked, fully configured and adapted to any environment.
-
-Ya, ya ... there are plenty of repos with similar projects out there, but it's fun to build your own one,
-with the additional benefit of understanding what's going on under the hood, and full control.
-
-Plus it's all modern, without much additional overhead and complexity.
+It can be also hacked (by owners, not intruders :-D), fully configured and adapted to any environment.
 
 100% of source code is written in Python, including configuration, HTML and CSS (with the help of Streamlit),
 so there is not much context switching and brain farting.
@@ -29,10 +23,10 @@ so there is not much context switching and brain farting.
 
 Let's talk hardware, shall we?
 
-Even though, it would be quite trivial to adapt this app to any OS and hardware, it has been developed, tailored and
+Even though it would be quite trivial to adapt this app to any OS and hardware, it has been developed, tailored and
 tested on resource constraint devices, like Raspberry PI.
 
-Here is a list of components needed to complete the project in its ideal setup. 
+Here is a list of components needed to complete the project in its ideal setup.
 
 - Raspberry PI (ideally RPi4) + case (connected via Ethernet or Wi-Fi)
 - USB camera (or optionally Wi-Fi camera)
@@ -48,21 +42,20 @@ Here is a list of components needed to complete the project in its ideal setup.
 - Virtual env
 - Clone repo
 - Supervisor
-- Crontab
+- Set up gmail 2-factor auth, and generate app password, see
+  the [tutorial](https://www.abstractapi.com/guides/sending-email-with-python)
+- Environmental variables:
 
-TODO: Add more details here...
+```
+export SMTP_SERVER_HOST="smtp.gmail.com"
+export SMTP_SERVER_PORT="465"
+export EMAIL_SENDER_ADDRESS="<your-gmail-address>"
+export EMAIL_SENDER_PASSWORD="<your-gmail-app-pass>"
+export RECEIVER_EMAIL_ADDRESSES="<alerts-recipients>"
+```
 
-## Communicating with system
+(More info coming here...)
 
-Communication with system is achieved via emails with specific commands:
-- Subject: `<command>`
-- Body: `{'hostname': <camera-hostname>} ... anything else here will be ignored ...`
-
-Currently supported commands:
-- `start alerts` - Force alerts to ON for 1 hr (even when house is occupied) 
-- `resume alerts` - Resume alerts to normal mode
-- `pause alerts` - Do not trigger any alerts for 1 hr (even house is not occupied or override mode is ON)
-- `open stream` - Enable remote access for 10 minutes. This will send a unique URL to the user, where stream can be accessed 
 
 ## Project file structure
 
@@ -73,18 +66,15 @@ Whole application source is in the `src` folder.
 - frontend.py - this is the front end, where we can see the live feed and data visualisations
 
 Other supporting modules:
+
 - config.py - app configuration
 - database.py - database connection (currently SQLite seems to be sufficient)
 - detections.py - provide trending datasets about historical detections (and some detections related functions)
 - models.py - SQL Alchemy models and DB creation
 - object_tracker.py - object tracking
-- security.py - check if alerts need to be triggered based on defined criteria and configuration, and send SMS and email alerts
-
-Standalone scripts:
-- rand_data_generator.py - generate some synthetic data in dev, which will populate plots
-- rec_video.py - record video clip from the video stream 
-- rpi_stats.py - record Raspberry PI temperature and voltage stats (useful when overclocking) 
-- device_finder.py - find devices currently connected to the local network
+- security.py - check if alerts need to be triggered based on defined criteria and configuration, and send SMS and email
+  alerts
+- mailer.py - sending emails via gmail
 
 ML models:
 - models/ contains labels and ssd_mobilenet model for object detection inference

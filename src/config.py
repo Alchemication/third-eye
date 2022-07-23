@@ -96,7 +96,7 @@ OBJ_PROBA = (0.3, 0.3, 0.1, 0.1, 0.1, 0.1)
 # otherwise single device will have a few dynamic Mac addresses for
 # each network (if one has a few in a single house)
 SUBNET_MASK = '192.168.1.0/24'
-HOME_OWNERS_MAC_ADDR = [{'mac_addr': '20:E8:74:00:B8:15', 'owner': 'Edo', 'device': 'phone'},
+HOME_OWNERS_MAC_ADDR = [{'mac_addr': '14:F2:87:0E:9A:54', 'owner': 'Edo', 'device': 'phone'},
                         {'mac_addr': '44:F2:1B:29:C3:ED', 'owner': 'Enio', 'device': 'phone'}]
 
 # if home owner devices have not been detected in Wi-Fi for N-minutes,
@@ -106,7 +106,7 @@ OWNERS_OUTSIDE_HOME_MIN = 20
 # set the hours between which will be triggered even when house is occupied by owners
 # - to disable: set to None to disable this feature,
 # - to enable: set to list of tuples, example from 24:00:00 to 04:59:59AM: [(24, 4)]
-SECURITY_ON_OVERRIDE_HOURS = [(24, 4)]
+SECURITY_ON_OVERRIDE_HOURS = [(22, 5)]
 
 # define objects, which can trigger security alerts
 INTRUDER_OBJECTS = ['person', 'cat', 'dog']
@@ -121,18 +121,6 @@ MIN_SEC_ALERT_CHECK = 3
 # if an alert was already sent within this many seconds, do not send another one
 MIN_SEC_BETWEEN_ALERTS = 60
 
-# configuration for SMS notifications
-# most of the items for security reasons need to be
-# inserted as environmental variables
-SMS_NOTIFICATIONS_ENABLED = True
-TWILIO_PHONE_NUMBER = os.environ['TWILIO_PHONE_NUMBER']
-TWILIO_SID = os.environ['TWILIO_SID']
-TWILIO_AUTH_TOKEN = os.environ['TWILIO_AUTH_TOKEN']
-
-# these numbers will receive SMS notifications,
-# example format: +353861234,+353871234
-NOTIFY_PHONE_NUMBERS = os.environ['NOTIFY_PHONE_NUMBERS'].split(',')
-
 # configuration for Email notifications
 EMAIL_NOTIFICATIONS_ENABLED = True
 SMTP_SERVER_HOST = os.environ['SMTP_SERVER_HOST']  # example: smtp.gmail.com
@@ -140,12 +128,6 @@ SMTP_SERVER_PORT = int(os.environ['SMTP_SERVER_PORT'])  # example: 587 for TLS
 EMAIL_SENDER_ADDRESS = os.environ['EMAIL_SENDER_ADDRESS']
 EMAIL_SENDER_PASSWORD = os.environ['EMAIL_SENDER_PASSWORD']
 
-# these emails will receive Email notifications,
+# these emails will receive Email notifications
 # example format: adam12@gmail.com,anna81@gmail.com
-RECEIVER_EMAIL_ADDRESSES = os.environ['RECEIVER_EMAIL_ADDRESSES'].split(',')  # comma separated list of addresses
-
-# API Key to open up/access the stream to the outside world
-STREAM_API_KEY = os.environ['STREAM_API_KEY']
-
-# how many minutes to open up the stream access for
-STREAM_EXPIRY_SEC = 180
+RECEIVER_EMAIL_ADDRESSES = os.environ['RECEIVER_EMAIL_ADDRESSES']  # comma separated list of addresses

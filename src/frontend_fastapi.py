@@ -11,7 +11,6 @@ from socket import gethostname
 import random
 from database import engine
 from detections import get_motion_analysis, get_objects_analysis
-from command_centre import get_open_stream_url
 from heart_beat import fetch_last_heart_beat, is_healthy
 
 # set up logger
@@ -37,8 +36,7 @@ async def read_root(request: Request):
     cache_id = random.random()
     # find out the stream URL (use public URL if a stream is currently open,
     # otherwise use the config value)
-    open_stream_url = get_open_stream_url()
-    stream_url = f'{open_stream_url or config.VIDEO_STREAM_BASE_URL}/{config.VIDEO_STREAM_PATH}'
+    stream_url = f'{config.VIDEO_STREAM_BASE_URL}/{config.VIDEO_STREAM_PATH}'
     return templates.TemplateResponse("index.html", {
         "request": request,
         "msg": "Hello, World",
